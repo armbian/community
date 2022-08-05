@@ -55,9 +55,9 @@ jobs:
 
     with:
 
-      variant: 'cli:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'cli:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 1
       of: 1
@@ -83,9 +83,9 @@ jobs:
 
     with:
 
-      variant: 'desktop:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'desktop:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 1
       of: 1
@@ -111,9 +111,9 @@ jobs:
 
     with:
 
-      variant: 'cli:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'cli:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: small
       part: 1
       of: 2
@@ -140,9 +140,9 @@ jobs:
 
     with:
 
-      variant: 'cli:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'cli:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 2
       of: 2
@@ -167,9 +167,9 @@ jobs:
     uses: armbian/scripts/.github/workflows/build-with-docker.yml@master
 
     with:
-      variant: 'desktop:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'desktop:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: big
       part: 1
       of: 2
@@ -194,9 +194,9 @@ jobs:
     uses: armbian/scripts/.github/workflows/build-with-docker.yml@master
 
     with:
-      variant: 'desktop:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'desktop:beta'
+      sourcerepo: 'nightly'
+      packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 2
       of: 2
