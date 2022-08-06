@@ -9,7 +9,7 @@ on:
 jobs:
 
   Cancel:
-    if: ${{ github.repository_owner == 'Armbian' && github.event.schedule == '' }}
+    if: ${{ github.repository_owner == 'Armbian' }}
     name: "Cancel currently active"
     runs-on: ubuntu-latest
     steps:
