@@ -57,7 +57,7 @@ jobs:
            size=$(echo $line | cut -d"," -f3)
            if [ "${name: -3}" == ".xz" ]; then
              board_name=$(echo $name | cut -d"_" -f3)
-             source config/boards/$board_name.*
+             source ../build/config/boards/$board_name.*
              out_release=$(echo $name | cut -d"_" -f4)
              out_branch=$(echo $name | cut -d"_" -f5)
              out_kernel=$(echo $name | cut -d"_" -f6-7 | cut -d"." -f1-3 | cut -d"_" -f1)
