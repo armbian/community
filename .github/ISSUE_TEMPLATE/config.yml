@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Bug reporting
     url: https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other/
-    about: Images found in this repository are supported by the community only!
+    about: Images found in this repository are supported by community only!
