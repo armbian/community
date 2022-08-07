@@ -1,4 +1,4 @@
-name: Make index
+name: "Generating index"
 #
 # Generates index
 #
@@ -6,7 +6,7 @@ name: Make index
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["Build train"]
+    workflows: ["Release"]
     types:
       - completed
 
