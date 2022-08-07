@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Bug reporting
+    url: https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other/
+    about: Bugs are getting solved within forums only
