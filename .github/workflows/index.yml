@@ -26,15 +26,16 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          repository: armbian/community
-          path: community
+          repository: armbian/build
+          ref: nightly
+          path: build
           clean: false
 
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          ref: nightly
+          repository: armbian/community
           path: community
           clean: false
 
