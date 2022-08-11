@@ -76,9 +76,8 @@ jobs:
         
       - uses: ncipollo/release-action@v1
         with:
-          #tag: "latest"
           tag: "${{ env.VERSION }}"
           bodyFile: "README.tmp"
           omitName: true
-          allowUpdates: true
+          allowUpdates: false
           token: ${{ secrets.GITHUB_TOKEN }}
