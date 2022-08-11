@@ -46,7 +46,7 @@ jobs:
         run: |
         
           sudo npm install --location=global json || true
-          truncate README.me --size=0 || true
+          truncate README.tmp --size=0 || true
           echo "VERSION=$(cat build/VERSION)" >> $GITHUB_ENV
           #cat "community/.github/Releases.md" >> README.tmp
           echo -en "&nbsp;\n\n" >> README.tmp
@@ -79,5 +79,5 @@ jobs:
           tag: "${{ env.VERSION }}"
           bodyFile: "README.tmp"
           omitName: true
-          allowUpdates: false
+          allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
