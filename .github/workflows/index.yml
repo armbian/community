@@ -18,7 +18,7 @@ jobs:
   jobsend:
 
     name: "Create index"
-    runs-on: [ubuntu-latest]
+    runs-on: small
     if: ${{ github.repository_owner == 'Armbian' }}
     steps:
 
