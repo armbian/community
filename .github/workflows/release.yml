@@ -56,7 +56,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 1
@@ -84,7 +84,7 @@ jobs:
     with:
 
       variant: 'desktop:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 1
@@ -112,7 +112,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: small
       part: 1
@@ -141,7 +141,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 2
@@ -168,7 +168,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: big
       part: 1
@@ -195,7 +195,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
-      sourcerepo: 'nightly'
+      sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
       part: 2
