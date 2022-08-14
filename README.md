@@ -16,7 +16,7 @@
 
 <br>
 
--  Builds are made from WIP (work in progress), TVB (tv boxes) or CSC (community contribution) <a href=https://github.com/armbian/build/tree/master/config/boards>build targets</a>,
+-  Builds are generated from WIP (work in progress), TVB (tv boxes) or CSC (community contribution) <a href=https://github.com/armbian/build/tree/master/config/boards>build targets</a>,
 -  Targets are built every Sunday in <b>automated and untested</b> manner, 
 -  Each build target gets 2 x CLI and 2 x XFCE desktop images in latest Debian and Ubuntu flavour,
 -  Builds are using <b>official Armbian build framework and are digitally signed</b>,
