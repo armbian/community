@@ -1,7 +1,7 @@
 <h3 align=center><a href="#build-tools"><img src="https://raw.githubusercontent.com/armbian/build/master/.github/armbian-logo.png" alt="Armbian logo" width="144"></a><br>community supported weekly builds</h3><h6 align=center>(work in progress, tv boxes, community contribution)</h6>
 <br>
 
--  Community images are built every Sunday in <b>automated and untested</b> manner, 
+-  Community build targets are built every Sunday in <b>automated and untested</b> manner, 
 -  Each build target gets 2 x CLI and 2 x XFCE desktop images in latest Debian and Ubuntu flavour,
 -  Builds are using <b>official Armbian build framework and are digitally signed</b>,
 -  All builds are getting <b>updates from official armbian servers</b> almost <b>every day</b>,
