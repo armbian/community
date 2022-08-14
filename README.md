@@ -4,8 +4,8 @@
   </a><br>
   <strong>Armbian Linux Community Supported Weekly Builds</strong><br>
 <br>
-<a href=https://github.com/armbian/community/actions/workflows/release.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Release?logo=linux&label=Automated%20Release&style=for-the-badge"></a>
-<a href=https://github.com/armbian/community/actions/workflows/index.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Generating%20index?logo=linux&label=Indexing&style=for-the-badge"></a>
+<a href=https://github.com/armbian/community/actions/workflows/release.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Release?label=Automated%20Release&style=for-the-badge"></a>
+<a href=https://github.com/armbian/community/actions/workflows/index.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Generating%20index?label=Indexing&style=for-the-badge"></a>
  <br>
 
 <br>
