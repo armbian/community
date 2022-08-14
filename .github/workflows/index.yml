@@ -51,10 +51,9 @@ jobs:
         run: |
         
           sudo npm install --location=global json || true
-          truncate README.tmp --size=0 || true
-          echo "VERSION=$(cat .github/Releases.md)" >> $GITHUB_ENV
+          truncate README.tmp --size=0 || true          
           echo "VERSION=$(date +%Y%U)" >> $GITHUB_ENV
-          #cat "community/.github/Releases.md" >> README.tmp
+          cat "community/.github/Releases.md" >> README.tmp
           echo -en "&nbsp;\n\n" >> README.tmp
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | Kernel |" >> README.tmp
           echo "| --- | :--: | :--: | :--: | :--: | :--: | --: | --: |" >> README.tmp
