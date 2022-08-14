@@ -24,6 +24,11 @@ jobs:
 
       - name: Runner prepare
         uses: armbian/actions/runner-prepare@main
+        
+      - uses: igorjs/gh-actions-clean-workflow@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          days_old: 14
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -47,7 +52,7 @@ jobs:
         
           sudo npm install --location=global json || true
           truncate README.tmp --size=0 || true
-          #echo "VERSION=$(cat build/VERSION)" >> $GITHUB_ENV
+          echo "VERSION=$(cat .github/Releases.md)" >> $GITHUB_ENV
           echo "VERSION=$(date +%Y%U)" >> $GITHUB_ENV
           #cat "community/.github/Releases.md" >> README.tmp
           echo -en "&nbsp;\n\n" >> README.tmp
