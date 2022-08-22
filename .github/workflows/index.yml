@@ -83,7 +83,7 @@ jobs:
           URL="https://github.com/armbian/community/releases/tag/${{ env.VERSION }}"
           cat unsupported.tmp | sort | uniq | sed 's|^|<a href='$URL'>|' | sed -e 's|$|</a>|g' | sed -z 's/\n/ | /g' | sed 's/.$//' | sed 's/.$//'
           cd ..
-          cat README.tmp
+          #cat README.tmp
         
       - uses: ncipollo/release-action@v1
         with:
