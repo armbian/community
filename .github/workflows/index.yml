@@ -81,7 +81,7 @@ jobs:
           done
           )
           #
-          URL="https://github.com/armbian/community/releases/tag/${{ env.VERSION }}"
+          URL="https://github.com/armbian/community/releases/tag/$VERSION"
           cat unsupported.tmp | sort | uniq | sed 's|^|<a href='$URL'>|' | sed -e 's|$|</a>|g' | sed -z 's/\n/ | /g' | sed 's/.$//' | sed 's/.$//'
           cd ..
           #cat README.tmp
