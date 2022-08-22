@@ -54,7 +54,8 @@ jobs:
           truncate README.tmp --size=0 || true
           truncate unsupported.tmp --size=0 || true
           truncate unsupported.html --size=0 || true
-          echo "VERSION=$(date +%Y%U)" >> $GITHUB_ENV
+          VERSION=$(date +%Y%U)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
           cat "community/.github/Releases.md" >> README.tmp
           echo -en "&nbsp;\n\n" >> README.tmp
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | Kernel |" >> README.tmp
