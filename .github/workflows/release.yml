@@ -60,6 +60,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
@@ -88,6 +89,7 @@ jobs:
     with:
 
       variant: 'desktop:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
@@ -116,6 +118,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: small
@@ -145,6 +148,7 @@ jobs:
     with:
 
       variant: 'cli:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
@@ -172,6 +176,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: big
@@ -199,6 +204,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
+      parallel: '3'
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
