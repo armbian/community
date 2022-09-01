@@ -24,4 +24,8 @@
 -  In case you don't find image you are looking for, check <a href=https://github.com/armbian/community/tags>older builds</a>, <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>,  <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build one</a>,
 - Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
 <br>
-<p align=center><a href=https://github.com/armbian/community/releases/latest><img border=0 width=100 src=https://cdn-icons-png.flaticon.com/512/724/724933.png></a><br><a href=https://github.com/armbian/community/releases/latest>download</a></p>
+<p align=center>
+<br>
+<a href=https://github.com/armbian/community/releases/latest><img width=600 src=https://www.armbian.com/wp-content/uploads/2022/07/xfce.png></a>
+<br> <br> <br>
+<a href=https://github.com/armbian/community/releases/latest><img border=0 width=100 src=https://cdn-icons-png.flaticon.com/512/724/724933.png></a><br><a href=https://github.com/armbian/community/releases/latest>download</a></p>
