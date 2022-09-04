@@ -47,6 +47,15 @@ jobs:
           path: community
           clean: false
 
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY2 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE2 }}
+          workdir: community
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
       - name: Make build list
         run: |
         
@@ -86,6 +95,13 @@ jobs:
           cd ..
           #cat README.tmp
         
+        
+          # header and footer are edited at GitHub          
+          cat community/.github/header.inc > community/README.md
+          cat community/.github/memo.inc >> community/README.md
+          echo -en "\n\n" >> community/README.md
+          cat unsupported.tmp >> scripts/README.md          
+        
       - uses: ncipollo/release-action@v1
         with:
           tag: "${{ env.VERSION }}"
@@ -93,3 +109,17 @@ jobs:
           name: "Community ${{ env.VERSION }}"
           allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update scripts
+        run: |
+          cd community
+          sudo chown -R $USER:$USER .git
+          if git status --porcelain | grep .; then
+             git config --global user.email "info@armbian.com"
+             git config --global user.name "Armbianworker"
+             git config pull.rebase false
+             git pull
+             git add .
+             git commit --allow-empty -m "Update index"
+             git push
+          fi
