@@ -90,6 +90,6 @@ jobs:
         with:
           tag: "${{ env.VERSION }}"
           bodyFile: "README.tmp"
-          name: "${{ env.VERSION }}"
+          name: "Community ${{ env.VERSION }}"
           allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
