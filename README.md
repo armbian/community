@@ -13,21 +13,7 @@
 <a href=http://discord.armbian.com/><img alt="Discord" src="https://img.shields.io/discord/854735915313659944?label=Discord&logo=discord&style=flat-square"></a>
 <a href=https://liberapay.com/armbian><img alt="Liberapay patrons" src="https://img.shields.io/liberapay/patrons/armbian?logo=liberapay&style=flat-square"></a>
 </p>
--  Builds are generated from WIP (work in progress), TVB (tv boxes) or CSC (community contribution) <a href=https://github.com/armbian/build/tree/master/config/boards>build targets</a>,
--  Targets are built every Sunday in <b>automated and untested</b> manner, 
--  Each build target gets 2 x CLI and 2 x XFCE desktop images in latest Debian and Ubuntu flavour,
--  Builds are using <b>official Armbian build framework and are digitally signed</b>,
--  All builds are getting <b>updates from official armbian servers</b> almost <b>every day</b>,
--  In case you don't find image you are looking for, check <a href=https://github.com/armbian/community/tags>older builds</a>, <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>,  <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build one</a>,
-- Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
-  <br>
 &nbsp;
-
-
-<p align='center'>
-  <a href='https://www.armbian.com'>
-    <img src='https://raw.githubusercontent.com/armbian/.github/master/profile/tux-two.png' width='400' height='226' alt='Armbian Linux'></a>
-<br>
 
 -  Builds are generated from WIP (work in progress), TVB (tv boxes) or CSC (community contribution) <a href=https://github.com/armbian/build/tree/master/config/boards>build targets</a>,
 -  Targets are built every Sunday in <b>automated and untested</b> manner, 
@@ -40,7 +26,6 @@
 &nbsp;
 &nbsp;
 
-| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | Kernel |
 | --- | :--: | :--: | :--: | :--: | :--: | --: | --: |
 | [Banana Pi M1+](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64.img.xz#bananapim1plus) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64.img.xz.sha) | jammy | current | cli | 307 Mb | 5.15.64 |
 | [Banana Pi M1+](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64_xfce_desktop.img.xz#bananapim1plus) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64_xfce_desktop.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Bananapim1plus_jammy_current_5.15.64_xfce_desktop.img.xz.sha) | jammy | current | xfce | 743 Mb | 5.15.64 |
