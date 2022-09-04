@@ -100,7 +100,7 @@ jobs:
           cat community/.github/header.inc > community/README.md
           cat community/.github/memo.inc >> community/README.md
           echo -en "\n\n" >> community/README.md
-          cat unsupported.tmp >> community/README.md          
+          cat README.tmp >> community/README.md          
         
       - uses: ncipollo/release-action@v1
         with:
