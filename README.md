@@ -405,14 +405,12 @@
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz.sha) | jammy | current | xfce | 862 Mb | 5.15.63 |
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz.sha) | sid | current | cli | 431 Mb | 5.15.63 |
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz.sha) | sid | current | xfce | 728 Mb | 5.15.63 |
-&nbsp;
 
-  <br>
+
+&nbsp;  <br>
 &nbsp;
 -  assembled every Sunday in <b>automated and untested</b> manner,
 -  If you don't find image you are looking for, check <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build from sources</a>,
 -  Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
   <br>
 &nbsp;
-&nbsp;
-
