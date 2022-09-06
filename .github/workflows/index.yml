@@ -93,9 +93,8 @@ jobs:
           done
           )
           cd ..
-          echo -en "&nbsp;\n\n" >> community/README.md
-          cat community/.github/footer.inc >> community/README.md
-          echo -en "&nbsp;\n\n" >> community/README.md
+          echo -en "\n\n&nbsp;" >> community/README.md
+          cat community/.github/footer.inc >> community/README.md          
           #
           #URL="https://github.com/armbian/community/releases/tag/$VERSION"
           #cat unsupported.tmp | sort | uniq | sed 's|^|<a href='$URL'>|' | sed -e 's|$|</a>|g' | sed -z 's/\n/ | /g' | sed 's/.$//' | sed 's/.$//'
@@ -104,7 +103,7 @@ jobs:
         
           # header and footer are edited at GitHub          
           #cat community/.github/header.inc > community/README.md
-          #echo -en "&nbsp;\n\n" >> README.tmp
+          #echo -en "\n\n&nbsp;" >> README.tmp
           #cat community/.github/memo.inc >> community/README.md
           #echo -en "\n\n" >> community/README.md
           #cat README.tmp >> community/README.md          
