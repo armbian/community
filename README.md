@@ -15,9 +15,9 @@
 </p>
 &nbsp;
 
--  made from <i>work in progress</i>, TV boxes or unsupported <a href=https://github.com/armbian/build/tree/master/config/boards>build targets</a>,
--  compiled using <b>official</b> Armbian build framework and are digitally signed,
--  getting updates from official armbian servers almost every day,
+-  made from <i>work in progress</i>, <i>TV boxes</i> or <i>unsupported build targets</i>,
+-  compiled using <b>official</b> Armbian build framework and digitally signed,
+-  getting updates from official armbian servers almost every day.
 &nbsp;
 &nbsp;
 
@@ -405,6 +405,8 @@
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.63_xfce_desktop.img.xz.sha) | jammy | current | xfce | 862 Mb | 5.15.63 |
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63.img.xz.sha) | sid | current | cli | 431 Mb | 5.15.63 |
 | [Z28 PRO](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz#z28pro) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz.asc) | [:file_folder:](https://github.com/armbian/community/releases/download/202236/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.63_xfce_desktop.img.xz.sha) | sid | current | xfce | 728 Mb | 5.15.63 |
+&nbsp;
+
   <br>
 &nbsp;
 -  assembled every Sunday in <b>automated and untested</b> manner,
