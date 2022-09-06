@@ -93,6 +93,7 @@ jobs:
           done
           )
           cd ..
+          echo -en "&nbsp;\n\n" >> community/README.md
           cat community/.github/footer.inc >> community/README.md
           
           #
