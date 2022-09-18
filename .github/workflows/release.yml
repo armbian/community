@@ -188,7 +188,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
-      parallel: 3
+      parallel: 2
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: big
@@ -216,7 +216,7 @@ jobs:
 
     with:
       variant: 'desktop:beta'
-      parallel: 3
+      parallel: 2
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
