@@ -11,7 +11,7 @@ on:
       - completed
 
 env:
-   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   GH_TOKEN: ${{ secrets.CR_PAT }}
 
 jobs:
   
@@ -27,7 +27,7 @@ jobs:
         
       - uses: igorjs/gh-actions-clean-workflow@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CR_PAT }}
           days_old: 14
 
       - name: Checkout repository
@@ -114,7 +114,7 @@ jobs:
           bodyFile: "community/.github/Releases.md"
           name: "Community ${{ env.VERSION }}"
           allowUpdates: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CR_PAT }}
 
       - name: Update scripts
         run: |
