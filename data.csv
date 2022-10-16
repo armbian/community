@@ -357,11 +357,12 @@ virtual-qemu/Sid_current_xfce_nightly|https://github.com/armbian/community/relea
 xt-q8l-v10/Jammy_current_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_jammy_current_5.15.74.img.xz|1665922247|303M|
 xt-q8l-v10/Jammy_current_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_jammy_current_5.15.74_xfce_desktop.img.xz|1665930424|1130M|
 xt-q8l-v10/Jammy_edge_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_jammy_edge_5.19.16.img.xz|1665922280|301M|
-xt-q8l-v10/Jammy_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_jammy_edge_5.19.16_xfce_desktop.img.xz|1665929113|1133M|
+xt-q8l-v10/Jammy_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_jammy_edge_5.19.16_xfce_desktop.img.xz|1665930838|1138M|
 xt-q8l-v10/Sid_current_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_sid_current_5.15.74.img.xz|1665922641|365M|
 xt-q8l-v10/Sid_current_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_sid_current_5.15.74_xfce_desktop.img.xz|1665929294|1030M|
 xt-q8l-v10/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_sid_edge_5.19.16.img.xz|1665922756|366M|
 xt-q8l-v10/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Xt-q8l-v10_sid_edge_5.19.16_xfce_desktop.img.xz|1665929283|1022M|
 z28pro/Jammy_current_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.74.img.xz|1665923013|369M|
+z28pro/Jammy_current_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Z28pro_jammy_current_5.15.74_xfce_desktop.img.xz|1665930817|1274M|
 z28pro/Sid_current_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.74.img.xz|1665923398|445M|
 z28pro/Sid_current_xfce_nightly|https://github.com/armbian/community/releases/download/202242/Armbian_22.11.0-trunk_Z28pro_sid_current_5.15.74_xfce_desktop.img.xz|1665930260|1138M|
