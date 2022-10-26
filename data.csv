@@ -67,6 +67,7 @@ cubietruck/Sid_edge_nightly|https://github.com/armbian/community/releases/downlo
 cubietruck/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubietruck_sid_edge_6.0.3_xfce_desktop.img.xz|1666764944|1013M|
 cubietruckplus/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubietruckplus_kinetic_edge_6.0.3.img.xz|1666739085|315M|
 cubietruckplus/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubietruckplus_kinetic_edge_6.0.3_xfce_desktop.img.xz|1666739341|1211M|
+cubietruckplus/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubietruckplus_sid_edge_6.0.3.img.xz|1666773725|377M|
 cubietruckplus/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubietruckplus_sid_edge_6.0.3_xfce_desktop.img.xz|1666766595|1028M|
 cubox-i/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubox-i_kinetic_edge_6.0.3.img.xz|1666737754|369M|
 cubox-i/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Cubox-i_kinetic_edge_6.0.3_xfce_desktop.img.xz|1666739272|1257M|
@@ -383,6 +384,7 @@ rock-3a/Sid_edge_nightly|https://github.com/armbian/community/releases/download/
 rock-3a/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock-3a_sid_edge_6.0.3_xfce_desktop.img.xz|1666752418|1173M|
 rock-5b/Kinetic_legacy_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock-5b_kinetic_legacy_5.10.72.img.xz|1666751419|317M|
 rock-5b/Kinetic_legacy_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock-5b_kinetic_legacy_5.10.72_xfce_desktop.img.xz|1666753829|1337M|
+rock-5b/Sid_legacy_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock-5b_sid_legacy_5.10.72.img.xz|1666772986|394M|
 rock-5b/Sid_legacy_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock-5b_sid_legacy_5.10.72_xfce_desktop.img.xz|1666765952|1106M|
 rock64/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock64_kinetic_edge_6.0.3.img.xz|1666751752|380M|
 rock64/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202243/Armbian_22.11.0-trunk_Rock64_kinetic_edge_6.0.3_xfce_desktop.img.xz|1666754162|1394M|
