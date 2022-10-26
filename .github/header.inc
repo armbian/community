@@ -2,11 +2,10 @@
   <a href="#">
   <img src="https://raw.githubusercontent.com/armbian/build/master/.github/armbian-logo.png" alt="Armbian logo" width="144">
   </a><br>
-  <strong>Armbian Linux Community</strong><br>
+  <strong>Armbian Linux Community</strong><br>rolling release<br>
 <br>
-<a href=https://github.com/armbian/community/actions/workflows/release.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Release?label=Automated%20Release&style=for-the-badge"></a>
-<a href=https://github.com/armbian/community/actions/workflows/index.yml><img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/armbian/community/Generating%20index?label=Indexing&style=for-the-badge"></a>
- <br>
+<img alt="Armbian Linux rolling" src="https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20edge&query=EDGE&color=34be5b&cacheSeconds=3600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json">
+<br><br>
 
 <br>
 <a href=https://twitter.com/armbian><img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/armbian?logo=twitter&style=flat-square"></a>
