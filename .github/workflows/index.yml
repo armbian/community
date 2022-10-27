@@ -100,7 +100,7 @@ jobs:
           echo -e "<br>\n\n# Optimized \n\n" >> community/README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> community/README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> community/README.md
-          listings "data.csv" "README.md" "Uefi\|Rpi4b"          
+          listings "data.csv" "README.md" "-v Uefi\|Rpi4b"          
           echo -en "\n\n&nbsp;" >> community/README.md
           cat community/.github/footer.inc >> community/README.md
         
