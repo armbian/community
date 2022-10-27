@@ -85,7 +85,8 @@ jobs:
                     )
           cd ..
           }
-
+          
+          truncate community/data.csv --size=0 || true
           sudo npm install --location=global json || true          
           VERSION=$(date +%Y%U)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
