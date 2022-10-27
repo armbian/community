@@ -58,58 +58,51 @@ jobs:
 
       - name: Make build list
         run: |
-        
+
+          function listings
+          {
+          cd community
+          gh release view --json assets 2>/dev/null | python3 -mjson.tool | sed  '1,2d;$d' | json -ga name url size updatedAt -d, | sort | grep $3 | (
+          while read -r line; do
+                  name=$(echo $line | cut -d"," -f1 | awk '{print tolower($0)}')
+                  url=$(echo $line | cut -d"," -f2)
+                  size=$(echo $line | cut -d"," -f3)
+                  updated=$(echo $line | cut -d"," -f4)
+                    if [[ "${name: -3}" == ".xz" ]]; then
+                      board_name=$(echo $name | cut -d"_" -f3)
+                      source ../build/config/boards/$board_name.*
+                      out_release=$(echo $name | cut -d"_" -f4)
+                      out_branch=$(echo $name | cut -d"_" -f5)
+                      out_kernel=$(echo $name | cut -d"_" -f6-7 | cut -d"." -f1-3 | cut -d"_" -f1)
+                      out_desktop=$(echo $name | cut -d"_" -f7)
+                      out_size=$(echo "scale=0; $size/1024/1024" | bc -l)"M"
+                      # outputs
+                      echo -ne "${board_name}/${out_release^}_${out_branch}$([[ -n "${out_desktop}" ]] && echo "_")${out_desktop}_nightly|$url|"$(date -d $updated +"%s")"|$out_size|\n" >> $1
+                      out_desktop=${out_desktop:-cli}
+                      echo -ne "| [$BOARD_NAME]($url#$board_name) | [:file_folder:]($url".asc") | [:file_folder:]($url".sha") | $out_release | $out_branch | $out_desktop | $out_size | $out_kernel |\n" >> $2
+                    fi
+                    done
+                    )
+          cd ..
+          }
+
           sudo npm install --location=global json || true          
-          #truncate unsupported.tmp --size=0 || true
-          #truncate unsupported.html --size=0 || true
           VERSION=$(date +%Y%U)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          #cat "community/.github/Releases.md" >> README.tmp
           cat community/.github/header.inc > community/README.md
           echo -en "&nbsp;\n\n" >> community/README.md
           cat community/.github/memo.inc >> community/README.md
           echo -en "&nbsp;\n\n" >> community/README.md
+          echo -e "\n# Generic / popular\n"  >> community/README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> community/README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> community/README.md
-          cd community
-          truncate data.csv --size=0 || true
-          gh release view --json assets 2>/dev/null | python3 -mjson.tool | sed  '1,2d;$d' | json -ga name url size updatedAt -d, | sort | (
-          while read -r line; do
-           name=$(echo $line | cut -d"," -f1 | awk '{print tolower($0)}')
-           url=$(echo $line | cut -d"," -f2)
-           size=$(echo $line | cut -d"," -f3)
-           updated=$(echo $line | cut -d"," -f4)
-           if [ "${name: -3}" == ".xz" ]; then
-             board_name=$(echo $name | cut -d"_" -f3)
-             source ../build/config/boards/$board_name.*
-             out_release=$(echo $name | cut -d"_" -f4)
-             out_branch=$(echo $name | cut -d"_" -f5)
-             out_kernel=$(echo $name | cut -d"_" -f6-7 | cut -d"." -f1-3 | cut -d"_" -f1)
-             out_desktop=$(echo $name | cut -d"_" -f7)             
-             out_size=$(echo "scale=0; $size/1024/1024" | bc -l)"M"
-             # outputs             
-             echo -ne "${board_name}/${out_release^}_${out_branch}$([[ -n "${out_desktop}" ]] && echo "_")${out_desktop}_nightly|$url|"$(date -d $updated +"%s")"|$out_size|\n" >> data.csv
-             out_desktop=${out_desktop:-cli}
-             echo -ne "| [$BOARD_NAME]($url#$board_name) | [:file_folder:]($url".asc") | [:file_folder:]($url".sha") | $out_release | $out_branch | $out_desktop | $out_size | $out_kernel |\n" >> README.md
-             #echo "$BOARD_NAME" >> unsupported.tmp
-           fi
-          done
-          )
-          cd ..
+          listings "data.csv" "README.md" "Uefi\|Rpi4b"
+          echo -e "<br>\n\n# Optimized \n\n" >> community/README.md
+          echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> community/README.md
+          echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> community/README.md
+          listings "data.csv" "README.md" "Uefi\|Rpi4b"          
           echo -en "\n\n&nbsp;" >> community/README.md
-          cat community/.github/footer.inc >> community/README.md          
-          #
-          #URL="https://github.com/armbian/community/releases/tag/$VERSION"
-          #cat unsupported.tmp | sort | uniq | sed 's|^|<a href='$URL'>|' | sed -e 's|$|</a>|g' | sed -z 's/\n/ | /g' | sed 's/.$//' | sed 's/.$//'
-          #cd ..
-          #cat README.tmp
-        
-          # header and footer are edited at GitHub          
-          #cat community/.github/header.inc > community/README.md
-          #echo -en "\n\n&nbsp;" >> README.tmp
-          #cat community/.github/memo.inc >> community/README.md
-          #echo -en "\n\n" >> community/README.md
-          #cat README.tmp >> community/README.md          
+          cat community/.github/footer.inc >> community/README.md
         
       - uses: ncipollo/release-action@v1
         with:
