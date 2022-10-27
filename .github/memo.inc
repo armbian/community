@@ -1,4 +1,3 @@
--  assembled every Sunday in automated and untested manner, 
--  compiled using official Armbian build framework and digitally signed,
--  getting updates from official armbian servers almost every day.
+<a href=#><img src="https://github.com/armbian/community/blob/main/.github/rolling-armbian-banner.png" width=815></a>
+&nbsp;
 &nbsp;
