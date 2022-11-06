@@ -8,6 +8,9 @@ uefi-x86/Kinetic_edge_nightly|https://github.com/armbian/community/releases/down
 uefi-x86/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.7_xfce_desktop.img.xz|1667726612|1902M|
 uefi-x86/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Uefi-x86_sid_edge_6.0.7.img.xz|1667725637|784M|
 uefi-x86/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Uefi-x86_sid_edge_6.0.7_xfce_desktop.img.xz|1667726591|1698M|
+aml-s9xx-box/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Aml-s9xx-box_kinetic_edge_6.0.7.img.xz|1667771845|399M|
+aml-s9xx-box/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Aml-s9xx-box_sid_edge_6.0.7.img.xz|1667772452|481M|
+aml-s9xx-box/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Aml-s9xx-box_sid_edge_6.0.7_xfce_desktop.img.xz|1667773054|1187M|
 bananapi/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Bananapi_kinetic_edge_6.0.7.img.xz|1667720617|330M|
 bananapi/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Bananapi_kinetic_edge_6.0.7_xfce_desktop.img.xz|1667726103|1230M|
 bananapi/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202245/Armbian_22.11.0-trunk_Bananapi_sid_edge_6.0.7.img.xz|1667726063|387M|
