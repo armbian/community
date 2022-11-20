@@ -1,3 +1,7 @@
+uefi-arm64/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-arm64_kinetic_edge_6.0.9.img.xz|1668982650|735M|
+uefi-arm64/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-arm64_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668984189|1768M|
+uefi-arm64/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-arm64_sid_edge_6.0.9.img.xz|1668982483|878M|
+uefi-arm64/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-arm64_sid_edge_6.0.9_xfce_desktop.img.xz|1668983411|1601M|
 uefi-x86/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.9.img.xz|1668951927|743M|
 uefi-x86/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668957789|1939M|
 uefi-x86/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Uefi-x86_sid_edge_6.0.9.img.xz|1668952060|827M|
@@ -68,8 +72,10 @@ cubietruck/Kinetic_edge_nightly|https://github.com/armbian/community/releases/do
 cubietruck/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruck_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668957208|1198M|
 cubietruck/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruck_sid_edge_6.0.9.img.xz|1668955191|388M|
 cubietruck/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruck_sid_edge_6.0.9_xfce_desktop.img.xz|1668957110|1050M|
+cubietruckplus/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruckplus_kinetic_edge_6.0.9.img.xz|1668980160|330M|
 cubietruckplus/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruckplus_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668958232|1205M|
 cubietruckplus/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruckplus_sid_edge_6.0.9.img.xz|1668955470|386M|
+cubietruckplus/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubietruckplus_sid_edge_6.0.9_xfce_desktop.img.xz|1668980656|1028M|
 cubox-i/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubox-i_kinetic_edge_6.0.9.img.xz|1668955828|380M|
 cubox-i/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubox-i_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668959490|1247M|
 cubox-i/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Cubox-i_sid_edge_6.0.9.img.xz|1668956321|439M|
@@ -77,6 +83,7 @@ cubox-i/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/down
 firefly-rk3399/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_kinetic_edge_6.0.9.img.xz|1668956255|401M|
 firefly-rk3399/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668959230|1397M|
 firefly-rk3399/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_sid_edge_6.0.9.img.xz|1668956562|470M|
+firefly-rk3399/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_sid_edge_6.0.9_xfce_desktop.img.xz|1668980892|1164M|
 jethubj100/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_kinetic_edge_6.0.9.img.xz|1668956903|402M|
 jethubj100/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668958877|1340M|
 jethubj100/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_sid_edge_6.0.9.img.xz|1668957095|469M|
@@ -140,6 +147,7 @@ micro/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/downlo
 mk808c/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Mk808c_kinetic_edge_6.0.9.img.xz|1668961214|329M|
 mk808c/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Mk808c_sid_edge_6.0.9.img.xz|1668961634|378M|
 nanopct4/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Nanopct4_kinetic_edge_6.0.9.img.xz|1668962375|401M|
+nanopct4/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Nanopct4_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668981636|1398M|
 nanopct4/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Nanopct4_sid_edge_6.0.9.img.xz|1668962113|476M|
 nanopct4/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Nanopct4_sid_edge_6.0.9_xfce_desktop.img.xz|1668964660|1190M|
 nanopi-r1/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Nanopi-r1_kinetic_edge_6.0.9.img.xz|1668962378|327M|
@@ -204,6 +212,7 @@ odroidc4/Sid_edge_nightly|https://github.com/armbian/community/releases/download
 odroidc4/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidc4_sid_edge_6.0.9_xfce_desktop.img.xz|1668967204|1194M|
 odroidhc4/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidhc4_kinetic_edge_6.0.9.img.xz|1668969121|386M|
 odroidhc4/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidhc4_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668968457|1371M|
+odroidhc4/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidhc4_sid_edge_6.0.9.img.xz|1668981228|454M|
 odroidhc4/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidhc4_sid_edge_6.0.9_xfce_desktop.img.xz|1668967747|1185M|
 odroidm1/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidm1_kinetic_edge_6.1.0-rc5.img.xz|1668969690|375M|
 odroidm1/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Odroidm1_kinetic_edge_6.1.0-rc5_xfce_desktop.img.xz|1668968203|1387M|
@@ -238,7 +247,9 @@ orangepi3-lts/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/rel
 orangepi3-lts/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3-lts_sid_edge_6.0.9.img.xz|1668955979|432M|
 orangepi3-lts/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3-lts_sid_edge_6.0.9_xfce_desktop.img.xz|1668969777|1137M|
 orangepi3/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3_kinetic_edge_6.0.9.img.xz|1668956002|353M|
+orangepi3/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668982372|1351M|
 orangepi3/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3_sid_edge_6.0.9.img.xz|1668956606|426M|
+orangepi3/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi3_sid_edge_6.0.9_xfce_desktop.img.xz|1668980834|1147M|
 orangepi4-lts/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi4-lts_kinetic_edge_6.0.9.img.xz|1668956085|385M|
 orangepi4-lts/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi4-lts_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668970532|1352M|
 orangepi4-lts/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Orangepi4-lts_sid_edge_6.0.9.img.xz|1668956251|455M|
@@ -365,6 +376,7 @@ rock-3a/Kinetic_edge_nightly|https://github.com/armbian/community/releases/downl
 rock-3a/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-3a_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668967722|1382M|
 rock-3a/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-3a_sid_edge_6.0.9.img.xz|1668970053|456M|
 rock-3a/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-3a_sid_edge_6.0.9_xfce_desktop.img.xz|1668967585|1180M|
+rock-5b/Kinetic_legacy_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-5b_kinetic_legacy_5.10.72.img.xz|1668981334|335M|
 rock-5b/Kinetic_legacy_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-5b_kinetic_legacy_5.10.72_xfce_desktop.img.xz|1668968695|1341M|
 rock-5b/Sid_legacy_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-5b_sid_legacy_5.10.72.img.xz|1668970515|402M|
 rock-5b/Sid_legacy_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rock-5b_sid_legacy_5.10.72_xfce_desktop.img.xz|1668967760|1126M|
@@ -406,11 +418,13 @@ rockpro64/Sid_edge_nightly|https://github.com/armbian/community/releases/downloa
 rockpro64/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Rockpro64_sid_edge_6.0.9_xfce_desktop.img.xz|1668972633|1157M|
 station-m1/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m1_kinetic_edge_6.0.9.img.xz|1668975473|403M|
 station-m1/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m1_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668973590|1402M|
+station-m1/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m1_sid_edge_6.0.9.img.xz|1668981912|468M|
 station-m1/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m1_sid_edge_6.0.9_xfce_desktop.img.xz|1668974038|1178M|
 station-m2/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m2_kinetic_edge_6.0.9.img.xz|1668976016|403M|
 station-m2/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m2_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668974009|1400M|
 station-m2/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m2_sid_edge_6.0.9.img.xz|1668976602|475M|
 station-m2/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-m2_sid_edge_6.0.9_xfce_desktop.img.xz|1668974336|1191M|
+station-p1/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-p1_kinetic_edge_6.0.9.img.xz|1668981738|404M|
 station-p1/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-p1_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668975612|1403M|
 station-p1/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-p1_sid_edge_6.0.9.img.xz|1668976577|478M|
 station-p1/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Station-p1_sid_edge_6.0.9_xfce_desktop.img.xz|1668974898|1196M|
@@ -435,4 +449,12 @@ tritium-h3/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releas
 tritium-h3/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h3_sid_edge_6.0.9.img.xz|1668978436|391M|
 tritium-h3/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h3_sid_edge_6.0.9_xfce_desktop.img.xz|1668977723|1047M|
 tritium-h5/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h5_kinetic_edge_6.0.9.img.xz|1668978655|354M|
+tritium-h5/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h5_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668984089|1346M|
+tritium-h5/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h5_sid_edge_6.0.9.img.xz|1668982277|417M|
+tritium-h5/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Tritium-h5_sid_edge_6.0.9_xfce_desktop.img.xz|1668982896|1150M|
 udoo/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Udoo_kinetic_edge_6.0.9.img.xz|1668978894|381M|
+udoo/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Udoo_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668983201|1268M|
+udoo/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Udoo_sid_edge_6.0.9.img.xz|1668981828|439M|
+udoo/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Udoo_sid_edge_6.0.9_xfce_desktop.img.xz|1668982329|1098M|
+zeropi/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Zeropi_kinetic_edge_6.0.9.img.xz|1668982003|331M|
+zeropi/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Zeropi_sid_edge_6.0.9.img.xz|1668982333|381M|
