@@ -56,6 +56,9 @@ beelinkx2/Kinetic_edge_nightly|https://github.com/armbian/community/releases/dow
 beelinkx2/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Beelinkx2_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668956761|1183M|
 beelinkx2/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Beelinkx2_sid_edge_6.0.9.img.xz|1668953744|387M|
 beelinkx2/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Beelinkx2_sid_edge_6.0.9_xfce_desktop.img.xz|1668955732|1045M|
+clearfogbase/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clearfogbase_kinetic_edge_5.17.15.img.xz|1669022144|315M|
+clearfogbase/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clearfogbase_sid_edge_5.17.15.img.xz|1669022124|365M|
+clearfogpro/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clearfogpro_sid_edge_5.17.15.img.xz|1669022214|363M|
 clockworkpi-a06/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clockworkpi-a06_kinetic_edge_6.0.9.img.xz|1668954435|380M|
 clockworkpi-a06/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clockworkpi-a06_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668956583|1369M|
 clockworkpi-a06/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Clockworkpi-a06_sid_edge_6.0.9.img.xz|1668954354|445M|
@@ -88,6 +91,8 @@ firefly-rk3399/Kinetic_edge_nightly|https://github.com/armbian/community/release
 firefly-rk3399/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668959230|1397M|
 firefly-rk3399/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_sid_edge_6.0.9.img.xz|1668956562|470M|
 firefly-rk3399/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Firefly-rk3399_sid_edge_6.0.9_xfce_desktop.img.xz|1668980892|1164M|
+helios4/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Helios4_kinetic_edge_5.17.15.img.xz|1669022887|312M|
+helios4/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Helios4_sid_edge_5.17.15.img.xz|1669022941|366M|
 jethubj100/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_kinetic_edge_6.0.9.img.xz|1668956903|402M|
 jethubj100/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_kinetic_edge_6.0.9_xfce_desktop.img.xz|1668958877|1340M|
 jethubj100/Sid_edge_nightly|https://github.com/armbian/community/releases/download/202247/Armbian_22.11.0-trunk_Jethubj100_sid_edge_6.0.9.img.xz|1668957095|469M|
