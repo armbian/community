@@ -46,7 +46,7 @@ jobs:
     runs-on: [ubuntu-latest]
     steps:
       - name: Purge
-        uses: dev-drprasad/delete-older-releases@v0.2.0
+        uses: Vucko130/delete-older-releases@v0.2.1
         with:
           keep_latest: 3
           delete_tag_pattern: 20
@@ -103,6 +103,34 @@ jobs:
 
     secrets:
       CR_PAT: ${{ secrets.CR_PAT }}
+      GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+      GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+      GPG_KEY2: ${{ secrets.GPG_KEY2 }}
+      GPG_PASSPHRASE2: ${{ secrets.GPG_PASSPHRASE2 }}
+      SCRIPTS_ACCESS_TOKEN: ${{ secrets.SCRIPTS_ACCESS_TOKEN }}
+      SSH_KEY_TORRENTS: ${{ secrets.KEY_TORRENTS }}
+      KNOWN_HOSTS_UPLOAD: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
+
+  x86-minimal:
+
+    needs: [ clean ]
+    uses: armbian/scripts/.github/workflows/build-with-docker.yml@master
+
+    with:
+
+      variant: 'minimal:beta'
+      parallel: 16
+      sourcerepo: 'master'
+      packagesrepo: 'yes'
+      runner: ubuntu-latest
+      part: 1
+      of: 1
+      include: 'grep uefi-x86 | ${{ github.event.inputs.advanced }}'
+      exclude: ''
+      uploading: true
+      boardtype: 'csc,tvb,wip'
+
+    secrets:
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
       GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
       GPG_KEY2: ${{ secrets.GPG_KEY2 }}
