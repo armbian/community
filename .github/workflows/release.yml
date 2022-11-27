@@ -119,7 +119,7 @@ jobs:
     with:
 
       variant: 'minimal:beta'
-      parallel: 16
+      parallel: 28
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: ubuntu-latest
@@ -148,7 +148,7 @@ jobs:
     with:
 
       variant: 'minimal:beta'
-      parallel: 16
+      parallel: 28
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: small
