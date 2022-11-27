@@ -257,7 +257,7 @@ jobs:
   jobsend:
 
     name: finish
-    needs: [x86,x86-desktop,cli1,desktop1,cli2,desktop2]
+    needs: [x86,x86-desktop,x86-minimal,cli1,desktop1,cli2,desktop2]
     runs-on: [ubuntu-latest]
     steps:
       - name: Assemble
