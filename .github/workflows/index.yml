@@ -80,7 +80,7 @@ jobs:
                       out_release=$(echo $name | cut -d"_" -f4)
                       out_branch=$(echo $name | cut -d"_" -f5)
                       out_kernel=$(echo $name | cut -d"_" -f6-7 | cut -d"." -f1-3 | cut -d"_" -f1)
-                      out_desktop=$(echo $name | cut -d"_" -f7)
+                      out_desktop=$(echo $name | cut -d"_" -f7- | cut -d"." -f1 | cut -d"_" -f1)
                       out_size=$(echo "scale=0; $size/1024/1024" | bc -l)"M"
                       # outputs
                       echo -ne "${board_name}/${out_release^}_${out_branch}$([[ -n "${out_desktop}" ]] && echo "_")${out_desktop}_nightly|$url|"$(date -d $updated +"%s")"|$out_size|\n" >> $1
