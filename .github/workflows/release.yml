@@ -151,7 +151,7 @@ jobs:
       parallel: 16
       sourcerepo: 'master'
       packagesrepo: 'yes'
-      runner: ubuntu-latest
+      runner: small
       part: 1
       of: 1
       include: '${{ github.event.inputs.advanced }}'
