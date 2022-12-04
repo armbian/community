@@ -58,12 +58,15 @@ jobs:
         
           VERSION=$(date +%Y%U)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          
+      
+      - name: Checkout repository
+        uses: actions/checkout@v3.1.0
+
       - name: Set version
         uses: ncipollo/release-action@v1
         with:
           tag: "${{ env.VERSION }}"
-          bodyFile: "community/.github/Releases.md"
+          bodyFile: ".github/Releases-wip.md"
           name: "Community ${{ env.VERSION }}"
           allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
