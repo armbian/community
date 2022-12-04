@@ -52,6 +52,21 @@ jobs:
           delete_tag_pattern: 20
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Calculate version
+        run: |
+        
+          VERSION=$(date +%Y%U)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          
+      - name: Set version
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "${{ env.VERSION }}"
+          bodyFile: "community/.github/Releases.md"
+          name: "Community ${{ env.VERSION }}"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   x86:
 
