@@ -166,7 +166,7 @@ jobs:
     with:
 
       variant: 'minimal:beta'
-      parallel: 22
+      parallel: 16
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: small
@@ -195,7 +195,7 @@ jobs:
     with:
 
       variant: 'minimal:beta'
-      parallel: 22
+      parallel: 16
       sourcerepo: 'master'
       packagesrepo: 'yes'
       runner: small
