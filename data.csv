@@ -8,6 +8,7 @@ uefi-arm64/Sid_edge_nightly|https://github.com/armbian/community/releases/downlo
 uefi-arm64/Sid_edge_minimal_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-arm64_sid_edge_6.0.10_minimal.img.xz|1669621933|728M|
 uefi-arm64/Sid_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-arm64_sid_edge_6.0.10_xfce_desktop.img.xz|1669603956|1574M|
 uefi-riscv64/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-riscv64_kinetic_edge_6.0.10.img.xz|1669526511|794M|
+uefi-riscv64/Kinetic_edge_minimal_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-riscv64_kinetic_edge_6.0.10_minimal.img.xz|1669623275|674M|
 uefi-x86/Kinetic_edge_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.10.img.xz|1669560173|745M|
 uefi-x86/Kinetic_edge_minimal_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.10_minimal.img.xz|1669561355|675M|
 uefi-x86/Kinetic_edge_xfce_nightly|https://github.com/armbian/community/releases/download/202248/Armbian_22.11.0-trunk_Uefi-x86_kinetic_edge_6.0.10_xfce_desktop.img.xz|1669561555|1900M|
