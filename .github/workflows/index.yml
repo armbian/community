@@ -81,14 +81,12 @@ jobs:
 
       - name: Update scripts
         run: |
-          cd community
-          sudo chown -R $USER:$USER .git
           if git status --porcelain | grep .; then
              git config --global user.email "info@armbian.com"
              git config --global user.name "Armbianworker"
              git config pull.rebase false
              git pull
-             git add .
-             git commit --allow-empty -m "Update"
+             git add README.md
+             git commit --allow-empty -m "Update index"
              git push
           fi
