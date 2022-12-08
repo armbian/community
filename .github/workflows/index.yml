@@ -25,7 +25,7 @@ jobs:
           filename: "comm"
           key: ${{ secrets.KEY_TORRENTS }}
           known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-          grep: "Uefi,Rpi4b"
+          grep: "-v Uefi,Rpi4b"
 
       - name: Make build list
         run: |
