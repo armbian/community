@@ -1,6 +1,8 @@
 name: "Generating index"
 on:
 
+  schedule:
+    - cron:  '0 01 * * 1'
   workflow_dispatch:
 
 env:
