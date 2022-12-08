@@ -21,4 +21,4 @@ jobs:
       - name: Get releases
         uses: armbian/actions/make-json@main
         with:
-          repository: "community"
+          repository: "build"
