@@ -22,3 +22,5 @@ jobs:
         uses: armbian/actions/make-json@main
         with:
           repository: "build"
+          KEY_TORRENTS: ${{ secrets.KEY_TORRENTS }}
+          KNOWN_HOSTS_UPLOAD: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
