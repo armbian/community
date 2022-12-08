@@ -21,6 +21,6 @@ jobs:
       - name: Get releases
         uses: armbian/actions/make-json@main
         with:
-          repository: "build"
+          repository: "community"
           key: ${{ secrets.KEY_TORRENTS }}
           known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
