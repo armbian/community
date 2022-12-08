@@ -22,12 +22,23 @@ jobs:
         uses: armbian/actions/make-json@main
         with:
           repository: "community"
-          filename: "comm"
+          filename: "generic"
+          key: ${{ secrets.KEY_TORRENTS }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
+          grep: "Uefi,Rpi4b"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@main
+        with:
+          repository: "community"
+          filename: "optimised"
           key: ${{ secrets.KEY_TORRENTS }}
           known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
           grep: "-v Uefi,Rpi4b"
 
+
       - name: Make build list
         run: |
 
-          cat json/comm.md
+          cat json/generic.md
+          cat json/optimised.md
