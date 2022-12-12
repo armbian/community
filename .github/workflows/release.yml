@@ -339,16 +339,17 @@ jobs:
 
     with:
 
-      variant: 'cli:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'cli:beta'
+      parallel: 10
+      sourcerepo: 'master'
+      packagesrepo: 'yes'
       runner: 'igor'
-      fromsources: '${{ github.event.inputs.fromsources }}'
       part: 1
       of: 1
       include: '${{ github.event.inputs.advanced }}'
       exclude: 'grep uefi-riscv64 | '
-      uploading: false
+      uploading: true
+      boardtype: 'csc,tvb,wip'
 
     secrets:
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
@@ -366,16 +367,17 @@ jobs:
 
     with:
 
-      variant: 'minimal:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
+      variant: 'minimal:beta'
+      parallel: 10
+      sourcerepo: 'master'
+      packagesrepo: 'yes'
       runner: 'igor'
-      fromsources: '${{ github.event.inputs.fromsources }}'
       part: 1
       of: 1
       include: '${{ github.event.inputs.advanced }}'
       exclude: 'grep uefi-riscv64 | '
-      uploading: false
+      uploading: true
+      boardtype: 'csc,tvb,wip'
 
     secrets:
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
@@ -392,16 +394,17 @@ jobs:
     uses: armbian/scripts/.github/workflows/build-with-docker.yml@master
 
     with:
-      variant: 'desktop:${{ github.event.inputs.choice }}'
-      sourcerepo: '${{ github.event.inputs.sourcerepo }}'
-      packagesrepo: '${{ github.event.inputs.packagesrepo }}'
-      fromsources: '${{ github.event.inputs.fromsources }}'
+      variant: 'desktop:beta'
+      parallel: 10
+      sourcerepo: 'master'
+      packagesrepo: 'yes'
       runner: 'igor'
       part: 1
       of: 1
       include: '${{ github.event.inputs.advanced }}'
       exclude: 'grep uefi-riscv64 | '
-      uploading: false
+      uploading: true
+      boardtype: 'csc,tvb,wip'
 
     secrets:
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
