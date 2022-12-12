@@ -352,6 +352,7 @@ jobs:
       boardtype: 'csc,tvb,wip'
 
     secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
       GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
       GPG_KEY2: ${{ secrets.GPG_KEY2 }}
@@ -380,6 +381,7 @@ jobs:
       boardtype: 'csc,tvb,wip'
 
     secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
       GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
       GPG_KEY2: ${{ secrets.GPG_KEY2 }}
@@ -407,6 +409,7 @@ jobs:
       boardtype: 'csc,tvb,wip'
 
     secrets:
+      CR_PAT: ${{ secrets.CR_PAT }}
       GPG_KEY1: ${{ secrets.GPG_KEY1 }}
       GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
       GPG_KEY2: ${{ secrets.GPG_KEY2 }}
