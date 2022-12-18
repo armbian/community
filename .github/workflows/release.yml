@@ -169,7 +169,7 @@ jobs:
       parallel: 14
       sourcerepo: 'master'
       packagesrepo: 'yes'
-      runner: cache
+      runner: ubuntu-latest
       part: 1
       of: 2
       include: '${{ github.event.inputs.advanced }}'
@@ -198,7 +198,7 @@ jobs:
       parallel: 14
       sourcerepo: 'master'
       packagesrepo: 'yes'
-      runner: cache
+      runner: small
       part: 2
       of: 2
       include: '${{ github.event.inputs.advanced }}'
