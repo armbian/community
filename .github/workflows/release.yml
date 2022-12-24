@@ -55,7 +55,8 @@ jobs:
           
       - name: Calculate version
         run: |
-        
+          
+          sudo timedatectl set-timezone "Europe/Ljubljana"
           VERSION=$(date +%Y%U)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       
