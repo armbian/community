@@ -3,3 +3,9 @@ contact_links:
   - name: Bug reporting
     url: https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other/
     about: Images found in this repository are supported by community only!
+  - name: Armbian OS Feature Requests
+    url: https://forum.armbian.com/forum/38-feature-requests/
+    about: Feature requests and enhancement ideas. A request does not guarantee consideration.
+  - name: Vanilla Linux kernel related bug report
+    url: https://bugzilla.kernel.org/
+    about: If you are using upstream Linux kernel
