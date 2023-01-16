@@ -12,3 +12,9 @@
 <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other/><img src="https://img.shields.io/badge/support-forum-green?logo=googlechat&style=flat-square"></a>
 <a href=https://liberapay.com/armbian><img alt="Liberapay patrons" src="https://img.shields.io/liberapay/patrons/armbian?logo=liberapay&style=flat-square"></a>
 </p>
+<p>
+F.A.Q.
+<ul>
+  <li>What is Lunar and Sid? Lunar operating system is assembled from Ubuntu packages and Sid from Debian. Both are pretty much latest</li>
+</ul>
+</p>
