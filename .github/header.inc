@@ -15,6 +15,7 @@
 <p>
 F.A.Q.
 <ul>
-  <li>What is Lunar and Sid? Lunar operating system is assembled from Ubuntu packages and Sid from Debian. Both are pretty much latest</li>
+  <li>What are Lunar and Sid? Lunar release is assembled from Ubuntu packages and Sid from Debian. Both are pretty much latest</li>
+  <li>Which variant should I pick? Minimal is command line with as little packages as possible, CLI is server install ready and desktop is XFCE</li>
 </ul>
 </p>
