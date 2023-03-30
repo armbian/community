@@ -103,7 +103,6 @@ jobs:
           name: "Community ${{ steps.releases.outputs.version }}"
           bodyFile: "body.html"
           allowUpdates: true
-          removeArtifacts: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
   Cluster_6:
