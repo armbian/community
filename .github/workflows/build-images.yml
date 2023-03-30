@@ -52,24 +52,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           days_old: 14
 
-  kernel:
-    name: "Update kernel cache"
-    needs: Prepare
-
-    if: ${{ github.repository_owner == 'Armbian' }}
-    uses: armbian/scripts/.github/workflows/build-kernel-cache.yml@main
-    with:
-      ACCESS_NAME: igorpecovnik
-      BUILD_BRANCH: ${{ inputs.BUILD_BRANCH }}
-      BUILD_RUNNER: ${{ inputs.BUILD_RUNNER }}
-    secrets:
-      ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-      KEY_TORRENTS: ${{ secrets.KEY_TORRENTS }}
-      KNOWN_HOSTS_UPLOAD: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-
   generaterelease:
 
-    needs: kernel
+    needs: Prepare
 
     if: ${{ github.repository_owner == 'Armbian' }}
     runs-on: ubuntu-latest
