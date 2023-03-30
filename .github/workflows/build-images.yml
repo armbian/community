@@ -3,8 +3,8 @@ name: Build Images
 
 on:
 #  push:
-  schedule:
-    - cron: "30 3 * * *"
+#  schedule:
+#    - cron: "30 3 * * *"
   workflow_dispatch:
     inputs:
       release:
