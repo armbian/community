@@ -31,7 +31,7 @@ jobs:
         uses: armbian/actions/make-json@dev
         with:
           owner: "armbian-alpha"
-          repository: "armbian-beta/os"
+          repository: "os"
           filename: "beta"
 
       - name: Make build list
