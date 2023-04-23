@@ -19,6 +19,11 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          repository: community
+          path: community
+          clean: false
 
       - name: Get releases
         uses: armbian/actions/make-json@dev
@@ -57,14 +62,6 @@ jobs:
           cat json/beta.md >> README.md
           echo -en "\n\n&nbsp;" >> README.md
           cat .github/footer.inc >> README.md
-
-      - uses: ncipollo/release-action@v1
-        with:
-          tag: "${{ env.VERSION }}"
-          bodyFile: ".github/Releases.md"
-          name: "Community ${{ env.VERSION }}"
-          allowUpdates: true
-          token: ${{ secrets.CR_PAT }}
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5
