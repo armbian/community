@@ -2,7 +2,7 @@ name: "Generating index"
 on:
 
   schedule:
-    - cron:  '0 01 * * 1'
+    - cron:  '0 5 * * *'
   workflow_dispatch:
 
 env:
@@ -80,7 +80,7 @@ jobs:
           echo -en "&nbsp;\n\n" >> README.md
           cat community/.github/memo.inc >> README.md
           echo -en "&nbsp;\n\n" >> README.md          
-          echo -e "<br>\n\n# All images \n\n" >> README.md
+          echo -e "<br>\n\n" >> README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
           cat json/alpha.md >> README.md
