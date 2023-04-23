@@ -35,9 +35,37 @@ jobs:
       - name: Get releases
         uses: armbian/actions/make-json@dev
         with:
-          owner: "armbian-alpha"
+          owner: "armbian-beta"
           repository: "os"
           filename: "beta"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbian-gama"
+          repository: "os"
+          filename: "gama"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbian-delta"
+          repository: "os"
+          filename: "delta"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbiankappa"
+          repository: "os"
+          filename: "kappa"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbianro"
+          repository: "os"
+          filename: "ro"
 
       - name: Make build list
         run: |
@@ -51,15 +79,16 @@ jobs:
           cat community/.github/header.inc > README.md
           echo -en "&nbsp;\n\n" >> README.md
           cat community/.github/memo.inc >> README.md
-          echo -en "&nbsp;\n\n" >> README.md
-          echo -e "\n# Generic / popular\n"  >> README.md
+          echo -en "&nbsp;\n\n" >> README.md          
+          echo -e "<br>\n\n# All images \n\n" >> README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
           cat json/alpha.md >> README.md
-          echo -e "<br>\n\n# Optimized \n\n" >> README.md
-          echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
-          echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
           cat json/beta.md >> README.md
+          cat json/gama.md >> README.md
+          cat json/delta.md >> README.md
+          cat json/kappa.md >> README.md
+          cat json/ro.md >> README.md
           echo -en "\n\n&nbsp;" >> README.md
           cat community/.github/footer.inc >> README.md
 
