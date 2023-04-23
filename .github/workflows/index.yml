@@ -74,6 +74,7 @@ jobs:
 
       - name: Update scripts
         run: |
+          cp README.md community/README.md
           cd community
           if git status --porcelain | grep .; then
              git config --global user.email "info@armbian.com"
