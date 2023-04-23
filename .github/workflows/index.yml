@@ -23,12 +23,14 @@ jobs:
       - name: Get releases
         uses: armbian/actions/make-json@dev
         with:
-          repository: "armbian-alpha/os"
+          owner: "armbian-alpha"
+          repository: "os"
           filename: "alpha"
 
       - name: Get releases
         uses: armbian/actions/make-json@dev
         with:
+          owner: "armbian-alpha"
           repository: "armbian-beta/os"
           filename: "beta"
 
