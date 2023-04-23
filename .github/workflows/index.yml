@@ -23,20 +23,14 @@ jobs:
       - name: Get releases
         uses: armbian/actions/make-json@main
         with:
-          repository: "community"
-          filename: "generic"
-          key: ${{ secrets.KEY_TORRENTS }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-          grep: "Uefi,Rpi4b"
+          repository: "armbian-alpha/os"
+          filename: "alpha"
 
       - name: Get releases
-        uses: armbian/actions/make-json@main
+        uses: armbian/actions/make-json@dev
         with:
-          repository: "community"
-          filename: "optimised"
-          key: ${{ secrets.KEY_TORRENTS }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-          grep: "-v Uefi,Rpi4b"
+          repository: "armbian-beta/os"
+          filename: "beta"
 
       - name: Make build list
         run: |
@@ -54,11 +48,11 @@ jobs:
           echo -e "\n# Generic / popular\n"  >> README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
-          cat json/generic.md >> README.md
+          cat json/alpha.md >> README.md
           echo -e "<br>\n\n# Optimized \n\n" >> README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
-          cat json/optimised.md >> README.md
+          cat json/beta.md >> README.md
           echo -en "\n\n&nbsp;" >> README.md
           cat .github/footer.inc >> README.md
 
