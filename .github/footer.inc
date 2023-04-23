@@ -1,6 +1,6 @@
   <br>
 &nbsp;
--  assembled every Sunday in automated and untested manner, 
+-  assembled once per day in automated and untested manner, 
 -  compiled using official Armbian build framework and digitally signed,
 -  getting updates from official armbian servers almost every day,
 -  assembled from unstable Debian and Ubuntu packages,

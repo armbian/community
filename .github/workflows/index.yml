@@ -2,7 +2,7 @@ name: "Generating index"
 on:
 
   schedule:
-    - cron:  '0 01 * * 1'
+    - cron:  '0 5 * * *'
   workflow_dispatch:
 
 env:
@@ -19,24 +19,53 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          repository: armbian/community
+          path: community
+          clean: false
 
       - name: Get releases
-        uses: armbian/actions/make-json@main
+        uses: armbian/actions/make-json@dev
         with:
-          repository: "community"
-          filename: "generic"
-          key: ${{ secrets.KEY_TORRENTS }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-          grep: "Uefi,Rpi4b"
+          owner: "armbian-alpha"
+          repository: "os"
+          filename: "alpha"
 
       - name: Get releases
-        uses: armbian/actions/make-json@main
+        uses: armbian/actions/make-json@dev
         with:
-          repository: "community"
-          filename: "optimised"
-          key: ${{ secrets.KEY_TORRENTS }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS_UPLOAD }}
-          grep: "-v Uefi,Rpi4b"
+          owner: "armbian-beta"
+          repository: "os"
+          filename: "beta"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbian-gama"
+          repository: "os"
+          filename: "gama"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbian-delta"
+          repository: "os"
+          filename: "delta"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbiankappa"
+          repository: "os"
+          filename: "kappa"
+
+      - name: Get releases
+        uses: armbian/actions/make-json@dev
+        with:
+          owner: "armbianro"
+          repository: "os"
+          filename: "ro"
 
       - name: Make build list
         run: |
@@ -47,28 +76,21 @@ jobs:
           #cat json/generic.md
           #cat json/optimised.md
           ls -l
-          cat .github/header.inc > README.md
+          cat community/.github/header.inc > README.md
           echo -en "&nbsp;\n\n" >> README.md
           cat community/.github/memo.inc >> README.md
-          echo -en "&nbsp;\n\n" >> README.md
-          echo -e "\n# Generic / popular\n"  >> README.md
+          echo -en "&nbsp;\n\n" >> README.md          
+          echo -e "<br>\n\n" >> README.md
           echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
           echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
-          cat json/generic.md >> README.md
-          echo -e "<br>\n\n# Optimized \n\n" >> README.md
-          echo "| Image &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPG | SHA | Release | Branch | &nbsp;&nbsp;&nbsp; Variant | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Size | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kernel |" >> README.md
-          echo "| --- | :--: | :--: | --: | --: | --: | --: | --: |" >> README.md
-          cat json/optimised.md >> README.md
+          cat json/alpha.md >> README.md
+          cat json/beta.md >> README.md
+          cat json/gama.md >> README.md
+          cat json/delta.md >> README.md
+          cat json/kappa.md >> README.md
+          cat json/ro.md >> README.md
           echo -en "\n\n&nbsp;" >> README.md
-          cat .github/footer.inc >> README.md
-
-      - uses: ncipollo/release-action@v1
-        with:
-          tag: "${{ env.VERSION }}"
-          bodyFile: ".github/Releases.md"
-          name: "Community ${{ env.VERSION }}"
-          allowUpdates: true
-          token: ${{ secrets.CR_PAT }}
+          cat community/.github/footer.inc >> README.md
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5
@@ -81,6 +103,8 @@ jobs:
 
       - name: Update scripts
         run: |
+          cp README.md community/README.md
+          cd community
           if git status --porcelain | grep .; then
              git config --global user.email "info@armbian.com"
              git config --global user.name "Armbianworker"
