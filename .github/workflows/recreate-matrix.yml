@@ -91,5 +91,5 @@ jobs:
       with:
         github_token: ${{ secrets.ACCESS_TOKEN }}
         repository: armbian/community
-        branch: ${{ github.ref }}
+        branch: main
         directory: community
