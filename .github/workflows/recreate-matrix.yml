@@ -47,7 +47,23 @@ jobs:
         fetch-depth: 0
         path: os
 
-    - name: "Rsync userpatches"
+    - name: Checkout Armbian Community Config
+      uses: actions/checkout@v3.5.2
+      with:
+        persist-credentials: false
+        repository: armbian/os
+        ref:  main
+        clean: false
+        fetch-depth: 0
+        path: community
+
+
+    - name: "Rsync OS userpatches"
+      run: |
+
+        rsync -av os/userpatches/. build/userpatches/
+
+    - name: "Rsync Community userpatches"
       run: |
 
         rsync -av os/userpatches/. build/userpatches/
@@ -57,8 +73,11 @@ jobs:
 
         cd build
         bash ./compile.sh gha-template
-        cd ..
-        cd os
+
+    - name: "Update action script"
+      run: |
+
+        cd community
         git config --local user.email "info@armbian.com"
         git config --local user.name "Armbianworker"
         git pull --rebase
@@ -71,6 +90,6 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.ACCESS_TOKEN }}
-        repository: armbian/os
+        repository: armbian/community
         branch: ${{ github.ref }}
-        directory: os
+        directory: community

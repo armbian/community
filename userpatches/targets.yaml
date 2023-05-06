@@ -1,0 +1,124 @@
+common-gha-configs:
+  armbian-gha: &armbian-gha
+    runners:
+      default: "ubuntu-latest" # or a ["tag", "list"]
+      by-name:
+        kernel: [ "self-hosted", "Linux", "alfa" ]
+        uboot: [ "self-hosted", "Linux", "fast" ]
+        armbian-bsp-cli: [ "ubuntu-latest" ]
+      by-name-and-arch:
+        rootfs-armhf: [ "self-hosted", "Linux", "ARM64" ]
+        rootfs-arm64: [ "self-hosted", "Linux", "ARM64" ]
+        rootfs-amd64: [ "self-hosted", "Linux", "X64" ]
+        rootfs-riscv64: [ "self-hosted", "Linux", "X64" ]
+        image-armhf: [ "self-hosted", "Linux", 'fast' ]
+        image-arm64: [ "self-hosted", "Linux", 'fast' ]
+        image-amd64: [ "self-hosted", "Linux", 'fast', "X64" ]
+        image-riscv64: [ "self-hosted", "Linux", 'fast', "X64" ]
+
+lists:
+
+  unsupported: &unsupported
+
+    - { BOARD: bananapim3, BRANCH: current }
+    - { BOARD: bananapipro, BRANCH: current }
+    - { BOARD: beaglev, BRANCH: current }
+    - { BOARD: beelinkx2, BRANCH: current }
+    - { BOARD: clockworkpi-a06, BRANCH: current }
+    - { BOARD: cubieboard2, BRANCH: current }
+    - { BOARD: cubieboard4, BRANCH: current }
+    - { BOARD: cubietruck, BRANCH: current }
+    - { BOARD: cubietruckplus, BRANCH: current }
+    - { BOARD: cubox-i, BRANCH: current }
+    - { BOARD: khadas-edge, BRANCH: current }
+    - { BOARD: lime-a33, BRANCH: current }
+    - { BOARD: mangopi-mq, BRANCH: current }
+    - { BOARD: melea1000, BRANCH: current }
+    - { BOARD: micro, BRANCH: current }
+    - { BOARD: nanopia64, BRANCH: current }
+    - { BOARD: nanopiair, BRANCH: current }
+    - { BOARD: nanopik1plus, BRANCH: current }
+    - { BOARD: nanopik2-s905, BRANCH: current }
+    - { BOARD: nezha, BRANCH: current }
+    - { BOARD: orangepi2, BRANCH: current }
+    - { BOARD: orangepipc2, BRANCH: current }
+    - { BOARD: orangepiprime, BRANCH: current }
+    - { BOARD: orangepi-rk3399, BRANCH: current }
+    - { BOARD: orangepiwin, BRANCH: current }
+    - { BOARD: orangepizeroplus2-h3, BRANCH: current }
+    - { BOARD: orangepizeroplus2-h5, BRANCH: current }
+    - { BOARD: pcduino3, BRANCH: current }
+    - { BOARD: pinebook-a64, BRANCH: current }
+    - { BOARD: pinecube, BRANCH: current }
+    - { BOARD: quartz64a, BRANCH: current }
+    - { BOARD: quartz64b, BRANCH: current }
+    - { BOARD: radxa-zero2, BRANCH: current }
+    - { BOARD: recore, BRANCH: current }
+    - { BOARD: rockpi-n10, BRANCH: current }
+    - { BOARD: roc-rk3399-pc, BRANCH: current }
+    - { BOARD: star64, BRANCH: current }
+    - { BOARD: sunvell-r69, BRANCH: current }
+    - { BOARD: tinkerboard-2, BRANCH: current }
+    - { BOARD: udoo, BRANCH: current }
+    - { BOARD: unleashed, BRANCH: current }
+    - { BOARD: unmatched, BRANCH: current }
+    - { BOARD: visionfive, BRANCH: current }
+    - { BOARD: visionfive2, BRANCH: current }
+    - { BOARD: xt-q8l-v10, BRANCH: current }
+
+targets:
+  all:
+    enabled: no # DISABLED! for now
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+    vars:
+      BUILD_MINIMAL: "no"
+      BUILD_DESKTOP: "yes"
+      DESKTOP_ENVIRONMENT: "xfce"
+      DESKTOP_ENVIRONMENT_CONFIG_NAME: "config_base"
+      RELEASE: "jammy"
+    items-from-inventory:
+      not-eos: "yes"
+
+  minimal-cli-testing-debian:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: sid
+      BUILD_MINIMAL: "no"
+      BUILD_DESKTOP: "no"
+    items:
+      - *unsupported
+
+  minimal-cli-stable-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: jammy
+      BUILD_MINIMAL: "no"
+      BUILD_DESKTOP: "no"
+    items:
+      - *unsupported
+
+  minimal-desktop-testing-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: lunar
+      BUILD_MINIMAL: "no"
+      DESKTOP_ENVIRONMENT: "xfce"
+      BUILD_DESKTOP: "yes"
+      DESKTOP_ENVIRONMENT_CONFIG_NAME: "config_base"
+      DESKTOP_APPGROUPS_SELECTED: ""
+    items:
+      - *unsupported
