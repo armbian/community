@@ -44,14 +44,14 @@ jobs:
         repository: armbian/os
         ref:  main
         clean: false
-        fetch-depth: 0
+        fetch-depth: 1
         path: os
 
     - name: Checkout Armbian Community Config
       uses: actions/checkout@v3.5.2
       with:
         persist-credentials: false
-        repository: armbian/os
+        repository: armbian/community
         ref:  main
         clean: false
         fetch-depth: 0
@@ -73,9 +73,7 @@ jobs:
 
         cd build
         bash ./compile.sh gha-template
-
-    - name: "Update action script"
-      run: |
+        cd ..
 
         cd community
         git config --local user.email "info@armbian.com"
@@ -93,3 +91,4 @@ jobs:
         repository: armbian/community
         branch: main
         directory: community
+        force: false
