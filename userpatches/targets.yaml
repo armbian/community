@@ -18,13 +18,11 @@ common-gha-configs:
 
 lists:
 
-  unsupported: &unsupported
+  unsupported-cli: &unsupported-cli
 
     - { BOARD: bananapim3, BRANCH: current }
     - { BOARD: bananapipro, BRANCH: current }
     - { BOARD: beaglev, BRANCH: current }
-    - { BOARD: beelinkx2, BRANCH: current }
-    - { BOARD: clockworkpi-a06, BRANCH: current }
     - { BOARD: cubieboard2, BRANCH: current }
     - { BOARD: cubieboard4, BRANCH: current }
     - { BOARD: cubietruck, BRANCH: current }
@@ -48,10 +46,7 @@ lists:
     - { BOARD: orangepizeroplus2-h3, BRANCH: current }
     - { BOARD: orangepizeroplus2-h5, BRANCH: current }
     - { BOARD: pcduino3, BRANCH: current }
-    - { BOARD: pinebook-a64, BRANCH: current }
     - { BOARD: pinecube, BRANCH: current }
-    - { BOARD: quartz64a, BRANCH: current }
-    - { BOARD: quartz64b, BRANCH: current }
     - { BOARD: radxa-zero2, BRANCH: current }
     - { BOARD: recore, BRANCH: current }
     - { BOARD: rockpi-n10, BRANCH: current }
@@ -64,22 +59,17 @@ lists:
     - { BOARD: unmatched, BRANCH: current }
     - { BOARD: visionfive, BRANCH: current }
     - { BOARD: visionfive2, BRANCH: current }
+
+  unsupported-desktop: &unsupported-desktop
+
+    - { BOARD: beelinkx2, BRANCH: current }
+    - { BOARD: clockworkpi-a06, BRANCH: current }
     - { BOARD: xt-q8l-v10, BRANCH: current }
+    - { BOARD: pinebook-a64, BRANCH: current }
+    - { BOARD: quartz64a, BRANCH: current }
+    - { BOARD: quartz64b, BRANCH: current }
 
 targets:
-  all:
-    enabled: no # DISABLED! for now
-    configs: [ armbian-images ]
-    pipeline:
-      gha: *armbian-gha
-    vars:
-      BUILD_MINIMAL: "no"
-      BUILD_DESKTOP: "yes"
-      DESKTOP_ENVIRONMENT: "xfce"
-      DESKTOP_ENVIRONMENT_CONFIG_NAME: "config_base"
-      RELEASE: "jammy"
-    items-from-inventory:
-      not-eos: "yes"
 
   minimal-cli-testing-debian:
     enabled: yes
@@ -89,23 +79,23 @@ targets:
       build-image: "yes"
     vars:
       RELEASE: sid
-      BUILD_MINIMAL: "no"
+      BUILD_MINIMAL: "yes"
       BUILD_DESKTOP: "no"
     items:
-      - *unsupported
+      - *unsupported-cli
 
-  minimal-cli-stable-ubuntu:
+  minimal-cli-unstable-ubuntu:
     enabled: yes
     configs: [ armbian-images ]
     pipeline:
       gha: *armbian-gha
       build-image: "yes"
     vars:
-      RELEASE: jammy
-      BUILD_MINIMAL: "no"
+      RELEASE: lunar
+      BUILD_MINIMAL: "yes"
       BUILD_DESKTOP: "no"
     items:
-      - *unsupported
+      - *unsupported-cli
 
   minimal-desktop-testing-ubuntu:
     enabled: yes
@@ -122,3 +112,4 @@ targets:
       DESKTOP_APPGROUPS_SELECTED: ""
     items:
       - *unsupported
+      - *unsupported-cli
