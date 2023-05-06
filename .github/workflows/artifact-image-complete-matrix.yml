@@ -1,0 +1,3704 @@
+
+# template file: 050.single_header.yaml
+
+name: "Build All Artifacts/Images"
+
+on:
+  #schedule:
+  #  - cron: '0 1 * * *' # Scheduled runs every day at 2am UTC
+  workflow_dispatch:
+    inputs:
+      skipImages:
+        description: 'Skip building images? no = build images, yes = skip images'
+        required: true
+        options: [ 'no', 'yes' ]
+        type: choice
+      checkOci:
+        description: 'Check OCI for existing artifacts? yes = check OCI, no = always build everything'
+        required: true
+        options: [ 'yes', 'no' ]
+        type: choice
+      extraParamsAllBuilds:
+        description: 'Extra params for all builds/jobs (prepare/artifact/image) (eg: DEBUG=yes)'
+        required: false
+        default: ''
+        type: string
+      versionOverride:
+        description: 'Version override'
+        required: false
+        default: ''
+
+env:
+
+  # For easier reuse across the multiple chunks ('armbian/build' repo)
+  BUILD_REPOSITORY: "armbian/build"
+  BUILD_REF: "main" # branch or tag or sha1
+
+  # For easier reuse across the multiple chunks ('armbian/os' repo)
+  USERPATCHES_REPOSITORY: "armbian/os"
+  USERPATCHES_REF: "main" # branch or tag or sha1
+  USERPATCHES_DIR: "userpatches" # folder inside USERPATCHES_REPOSITORY
+
+  # Armbian envs. Adjust to your needs.
+  # This makes builds faster, but only if the Docker images are up-to-date with all dependencies, Python, tools, etc. Otherwise it makes it... slower.
+  DOCKER_SKIP_UPDATE: "yes" # Do not apt update/install/requirements/etc during Dockerfile build, trust that Docker images are up-to-date.
+
+  # Added to every build, even the prepare job.
+  EXTRA_PARAMS_ALL_BUILDS: "${{ github.event.inputs.extraParamsAllBuilds }}"
+
+  # To use GitHub CLI in a GitHub Actions workflow
+  GH_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+  # Added to every image build arguments.
+  EXTRA_PARAMS_IMAGE: "'DONT_BUILD_ARTIFACTS=any,kernel,firmware,full_firmware,rootfs,fake_ubuntu_advantage_tools,armbian-config,armbian-zsh,armbian-plymouth-theme' COMPRESS_OUTPUTIMAGE=xz,sha SHOW_DEBIAN=yes SHARE_LOG=yes "
+
+jobs:
+
+  version_prep:
+    name: "Bump version"
+    runs-on: [ "self-hosted", "Linux", 'fast' ]
+    steps:
+
+      # Cleaning self hosted runners
+      - name: Runner clean
+        uses: armbian/actions/runner-clean@main
+
+      # Clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 0
+          clean: false # true is default.
+
+      # Bump version automatically
+      - name: Bump version
+        if: ${{ github.event.inputs.versionOverride == '' }}
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v3.18.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          git-message: 'Bump release to {version}'
+          git-user-name: armbianworker
+          git-user-email: info@armbian.com
+          output-file: 'false'
+          skip-version-file: 'false'
+          skip-on-empty: 'false'
+          skip-commit: 'false'
+          skip-ci: 'false'
+          version-file: "${{ github.event.inputs.release || 'nightly' }}.json"
+          pre-release: "true"
+          git-branch: 'main'
+          tag-prefix: ''
+          pre-release-identifier: 'trunk'
+
+      - name: "Generate body file"
+        run: |
+            echo "
+              <p align='center'>
+              <a href='https://www.armbian.com'>
+              <img src='https://raw.githubusercontent.com/armbian/.github/master/profile/tux-two.png' width='400'></a></p>
+              <h1 align=center>Rolling releases</h1>
+              <p align=center>
+              <a href='https://www.armbian.com'><img alt='Armbian Linux stable' src='https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20current&query=CURRENT&color=f71000&cacheSeconds=600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json'></a>
+              <a href='https://www.armbian.com'><img alt='Armbian Linux rolling' src='https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20edge&query=EDGE&color=34be5b&cacheSeconds=600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json'></a>
+              </p>
+              <br>
+
+              - rolling releases are available at the bottom of <a href='https://www.armbian.com/download/' target=_blanks>official download pages</a>
+              - if you want to change automated builds variants, edit <a href='https://github.com/armbian/os/tree/main/targets'>build config files</a>
+              - for old builds with unknown support status check <a href='https://archive.armbian.com' target=_blank>archives</a>
+
+              <br>
+              &nbsp;
+              </p>" > body.html
+
+      - uses: ncipollo/release-action@v1
+        if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.versionOverride == '' }}
+        with:
+          tag: ${{ steps.changelog.outputs.tag }}
+          name: "${{ steps.changelog.outputs.tag }}"
+          bodyFile: "body.html"
+          prerelease: "true"
+          allowUpdates: true
+          removeArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save
+        id: releases
+        run: |
+
+          echo "version=${{ steps.changelog.outputs.tag }}${{ github.event.inputs.versionOverride }}" >> $GITHUB_OUTPUT
+
+    outputs:
+
+      # not related to matrix
+      version: ${{ steps.releases.outputs.version }}
+
+  matrix_prep:
+    name: "JSON matrix: 17/16 :: 17 artifact chunks, 16 image chunks"
+    if: ${{ github.repository_owner == 'armbian' }}
+    needs: [ version_prep ]
+    runs-on: [ "self-hosted", "Linux", 'fast' ]
+    steps:
+
+      # Cleaning self hosted runners
+      - name: Runner clean
+        uses: armbian/actions/runner-clean@main
+
+      # clone the build system repo (`armbian/build`)
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ env.BUILD_REF }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+          path: build
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 0
+          clean: false # true is default.
+          path: userpatches
+
+      - name: "grab the sha1 of the latest commit of the build repo ${{ env.BUILD_REPOSITORY }}#${{ env.BUILD_REF }}"
+        id: latest-commit
+        run: |
+          cd build
+          echo "sha1=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          cd ..
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+
+          mkdir -pv build/userpatches
+          rsync -av userpatches/${{env.USERPATCHES_DIR}}/. build/userpatches/
+
+      - name: GitHub cache
+        id: cache-restore
+        uses: actions/cache@v3
+        with:
+          path: |
+            cache/memoize
+            cache/oci/positive
+          key: ${{ runner.os }}-matrix-cache-${{ github.sha }}-${{ steps.latest-commit.outputs.sha1 }}"
+          restore-keys: |
+            ${{ runner.os }}-matrix-cache-
+
+      # Login to ghcr.io, we're gonna do a lot of OCI lookups.
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      - name: Prepare Info JSON and Matrices
+        id: prepare-matrix
+        run: |
+          # this sets outputs "artifact-matrix" #and "image-matrix"
+          cd build
+          bash ./compile.sh gha-matrix armbian-images CLEAN_INFO=yes CLEAN_MATRIX=yes MATRIX_ARTIFACT_CHUNKS=17 MATRIX_IMAGE_CHUNKS=16 CHECK_OCI=${{ github.event.inputs.checkOci }} TARGETS_FILENAME=targets.yaml SKIP_IMAGES=${{ github.event.inputs.skipImages }} ${{env.EXTRA_PARAMS_ALL_BUILDS}} SHARE_LOG=yes #  IMAGES_ONLY_OUTDATED_ARTIFACTS=yes
+
+      - name: chown cache memoize/oci back to normal user
+        run: sudo chown -R $USER:$USER build/cache/memoize build/cache/oci/positive
+
+    outputs:
+
+      # not related to matrix
+      build-sha1: ${{ steps.latest-commit.outputs.sha1 }}
+      version: ${{ needs.version_prep.outputs.version }}
+
+# template file: 150.per-chunk-artifacts_prep-outputs.yaml
+
+      # artifacts-1 of 17
+      artifacts-chunk-json-1: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-1 }}
+      artifacts-chunk-not-empty-1: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-1 }}
+      artifacts-chunk-size-1: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-1 }}
+      # artifacts-2 of 17
+      artifacts-chunk-json-2: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-2 }}
+      artifacts-chunk-not-empty-2: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-2 }}
+      artifacts-chunk-size-2: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-2 }}
+      # artifacts-3 of 17
+      artifacts-chunk-json-3: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-3 }}
+      artifacts-chunk-not-empty-3: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-3 }}
+      artifacts-chunk-size-3: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-3 }}
+      # artifacts-4 of 17
+      artifacts-chunk-json-4: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-4 }}
+      artifacts-chunk-not-empty-4: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-4 }}
+      artifacts-chunk-size-4: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-4 }}
+      # artifacts-5 of 17
+      artifacts-chunk-json-5: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-5 }}
+      artifacts-chunk-not-empty-5: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-5 }}
+      artifacts-chunk-size-5: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-5 }}
+      # artifacts-6 of 17
+      artifacts-chunk-json-6: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-6 }}
+      artifacts-chunk-not-empty-6: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-6 }}
+      artifacts-chunk-size-6: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-6 }}
+      # artifacts-7 of 17
+      artifacts-chunk-json-7: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-7 }}
+      artifacts-chunk-not-empty-7: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-7 }}
+      artifacts-chunk-size-7: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-7 }}
+      # artifacts-8 of 17
+      artifacts-chunk-json-8: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-8 }}
+      artifacts-chunk-not-empty-8: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-8 }}
+      artifacts-chunk-size-8: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-8 }}
+      # artifacts-9 of 17
+      artifacts-chunk-json-9: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-9 }}
+      artifacts-chunk-not-empty-9: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-9 }}
+      artifacts-chunk-size-9: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-9 }}
+      # artifacts-10 of 17
+      artifacts-chunk-json-10: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-10 }}
+      artifacts-chunk-not-empty-10: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-10 }}
+      artifacts-chunk-size-10: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-10 }}
+      # artifacts-11 of 17
+      artifacts-chunk-json-11: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-11 }}
+      artifacts-chunk-not-empty-11: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-11 }}
+      artifacts-chunk-size-11: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-11 }}
+      # artifacts-12 of 17
+      artifacts-chunk-json-12: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-12 }}
+      artifacts-chunk-not-empty-12: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-12 }}
+      artifacts-chunk-size-12: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-12 }}
+      # artifacts-13 of 17
+      artifacts-chunk-json-13: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-13 }}
+      artifacts-chunk-not-empty-13: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-13 }}
+      artifacts-chunk-size-13: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-13 }}
+      # artifacts-14 of 17
+      artifacts-chunk-json-14: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-14 }}
+      artifacts-chunk-not-empty-14: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-14 }}
+      artifacts-chunk-size-14: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-14 }}
+      # artifacts-15 of 17
+      artifacts-chunk-json-15: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-15 }}
+      artifacts-chunk-not-empty-15: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-15 }}
+      artifacts-chunk-size-15: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-15 }}
+      # artifacts-16 of 17
+      artifacts-chunk-json-16: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-16 }}
+      artifacts-chunk-not-empty-16: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-16 }}
+      artifacts-chunk-size-16: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-16 }}
+      # artifacts-17 of 17
+      artifacts-chunk-json-17: ${{ steps.prepare-matrix.outputs.artifacts-chunk-json-17 }}
+      artifacts-chunk-not-empty-17: ${{ steps.prepare-matrix.outputs.artifacts-chunk-not-empty-17 }}
+      artifacts-chunk-size-17: ${{ steps.prepare-matrix.outputs.artifacts-chunk-size-17 }}
+
+# template file: 151.per-chunk-images_prep-outputs.yaml
+
+      # artifacts-1 of 16
+      images-chunk-json-1: ${{ steps.prepare-matrix.outputs.images-chunk-json-1 }}
+      images-chunk-not-empty-1: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-1 }}
+      images-chunk-size-1: ${{ steps.prepare-matrix.outputs.images-chunk-size-1 }}
+      # artifacts-2 of 16
+      images-chunk-json-2: ${{ steps.prepare-matrix.outputs.images-chunk-json-2 }}
+      images-chunk-not-empty-2: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-2 }}
+      images-chunk-size-2: ${{ steps.prepare-matrix.outputs.images-chunk-size-2 }}
+      # artifacts-3 of 16
+      images-chunk-json-3: ${{ steps.prepare-matrix.outputs.images-chunk-json-3 }}
+      images-chunk-not-empty-3: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-3 }}
+      images-chunk-size-3: ${{ steps.prepare-matrix.outputs.images-chunk-size-3 }}
+      # artifacts-4 of 16
+      images-chunk-json-4: ${{ steps.prepare-matrix.outputs.images-chunk-json-4 }}
+      images-chunk-not-empty-4: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-4 }}
+      images-chunk-size-4: ${{ steps.prepare-matrix.outputs.images-chunk-size-4 }}
+      # artifacts-5 of 16
+      images-chunk-json-5: ${{ steps.prepare-matrix.outputs.images-chunk-json-5 }}
+      images-chunk-not-empty-5: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-5 }}
+      images-chunk-size-5: ${{ steps.prepare-matrix.outputs.images-chunk-size-5 }}
+      # artifacts-6 of 16
+      images-chunk-json-6: ${{ steps.prepare-matrix.outputs.images-chunk-json-6 }}
+      images-chunk-not-empty-6: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-6 }}
+      images-chunk-size-6: ${{ steps.prepare-matrix.outputs.images-chunk-size-6 }}
+      # artifacts-7 of 16
+      images-chunk-json-7: ${{ steps.prepare-matrix.outputs.images-chunk-json-7 }}
+      images-chunk-not-empty-7: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-7 }}
+      images-chunk-size-7: ${{ steps.prepare-matrix.outputs.images-chunk-size-7 }}
+      # artifacts-8 of 16
+      images-chunk-json-8: ${{ steps.prepare-matrix.outputs.images-chunk-json-8 }}
+      images-chunk-not-empty-8: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-8 }}
+      images-chunk-size-8: ${{ steps.prepare-matrix.outputs.images-chunk-size-8 }}
+      # artifacts-9 of 16
+      images-chunk-json-9: ${{ steps.prepare-matrix.outputs.images-chunk-json-9 }}
+      images-chunk-not-empty-9: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-9 }}
+      images-chunk-size-9: ${{ steps.prepare-matrix.outputs.images-chunk-size-9 }}
+      # artifacts-10 of 16
+      images-chunk-json-10: ${{ steps.prepare-matrix.outputs.images-chunk-json-10 }}
+      images-chunk-not-empty-10: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-10 }}
+      images-chunk-size-10: ${{ steps.prepare-matrix.outputs.images-chunk-size-10 }}
+      # artifacts-11 of 16
+      images-chunk-json-11: ${{ steps.prepare-matrix.outputs.images-chunk-json-11 }}
+      images-chunk-not-empty-11: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-11 }}
+      images-chunk-size-11: ${{ steps.prepare-matrix.outputs.images-chunk-size-11 }}
+      # artifacts-12 of 16
+      images-chunk-json-12: ${{ steps.prepare-matrix.outputs.images-chunk-json-12 }}
+      images-chunk-not-empty-12: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-12 }}
+      images-chunk-size-12: ${{ steps.prepare-matrix.outputs.images-chunk-size-12 }}
+      # artifacts-13 of 16
+      images-chunk-json-13: ${{ steps.prepare-matrix.outputs.images-chunk-json-13 }}
+      images-chunk-not-empty-13: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-13 }}
+      images-chunk-size-13: ${{ steps.prepare-matrix.outputs.images-chunk-size-13 }}
+      # artifacts-14 of 16
+      images-chunk-json-14: ${{ steps.prepare-matrix.outputs.images-chunk-json-14 }}
+      images-chunk-not-empty-14: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-14 }}
+      images-chunk-size-14: ${{ steps.prepare-matrix.outputs.images-chunk-size-14 }}
+      # artifacts-15 of 16
+      images-chunk-json-15: ${{ steps.prepare-matrix.outputs.images-chunk-json-15 }}
+      images-chunk-not-empty-15: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-15 }}
+      images-chunk-size-15: ${{ steps.prepare-matrix.outputs.images-chunk-size-15 }}
+      # artifacts-16 of 16
+      images-chunk-json-16: ${{ steps.prepare-matrix.outputs.images-chunk-json-16 }}
+      images-chunk-not-empty-16: ${{ steps.prepare-matrix.outputs.images-chunk-not-empty-16 }}
+      images-chunk-size-16: ${{ steps.prepare-matrix.outputs.images-chunk-size-16 }}
+
+# template file: 250.single_aggr-jobs.yaml
+
+  # ------ aggregate all artifact chunks into a single dependency -------
+
+  all-artifacts-ready:
+    name: "17 artifacts chunks ready"
+    runs-on: ubuntu-latest # not going to run, anyway, but is required.
+    if: ${{ always() && ( 1 == 2 ) }} # eg: never run.
+    needs: [ "matrix_prep", "build-artifacts-chunk-1","build-artifacts-chunk-2","build-artifacts-chunk-3","build-artifacts-chunk-4","build-artifacts-chunk-5","build-artifacts-chunk-6","build-artifacts-chunk-7","build-artifacts-chunk-8","build-artifacts-chunk-9","build-artifacts-chunk-10","build-artifacts-chunk-11","build-artifacts-chunk-12","build-artifacts-chunk-13","build-artifacts-chunk-14","build-artifacts-chunk-15","build-artifacts-chunk-16","build-artifacts-chunk-17" ] # <-- HERE: all artifact chunk numbers.
+    steps:
+      - name: fake step
+        run: uptime
+
+  all-images-ready:
+    name: "16 image chunks ready"
+    runs-on: ubuntu-latest # not going to run, anyway, but is required.
+    if: ${{ always() && ( 1 == 2 ) }} # eg: never run.
+    needs: [ "matrix_prep", "build-images-chunk-1","build-images-chunk-2","build-images-chunk-3","build-images-chunk-4","build-images-chunk-5","build-images-chunk-6","build-images-chunk-7","build-images-chunk-8","build-images-chunk-9","build-images-chunk-10","build-images-chunk-11","build-images-chunk-12","build-images-chunk-13","build-images-chunk-14","build-images-chunk-15","build-images-chunk-16" ] # <-- HERE: all image chunk numbers.
+    steps:
+      - name: fake step
+        run: uptime
+
+  all-artifacts-and-images-ready:
+    name: "17 artifacts and 16 image chunks ready"
+    runs-on: ubuntu-latest # not going to run, anyway, but is required.
+    if: ${{ always() && ( 1 == 2 ) }} # eg: never run.
+    needs: [ "matrix_prep", "all-artifacts-ready", "all-images-ready" ]
+    steps:
+      - name: fake step
+        run: uptime
+
+# template file: 550.per-chunk-artifacts_job.yaml
+
+  "build-artifacts-chunk-1": # templated "build-artifacts-chunk-1"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-1 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-1) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A1' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-2": # templated "build-artifacts-chunk-2"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-2 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-2) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A2' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-3": # templated "build-artifacts-chunk-3"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-3 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-3) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A3' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-4": # templated "build-artifacts-chunk-4"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-4 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-4) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A4' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-5": # templated "build-artifacts-chunk-5"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-5 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-5) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A5' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-6": # templated "build-artifacts-chunk-6"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-6 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-6) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A6' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-7": # templated "build-artifacts-chunk-7"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-7 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-7) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A7' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-8": # templated "build-artifacts-chunk-8"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-8 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-8) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A8' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-9": # templated "build-artifacts-chunk-9"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-9 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-9) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A9' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-10": # templated "build-artifacts-chunk-10"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-10 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-10) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A10' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-11": # templated "build-artifacts-chunk-11"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-11 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-11) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A11' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-12": # templated "build-artifacts-chunk-12"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-12 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-12) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A12' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-13": # templated "build-artifacts-chunk-13"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-13 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-13) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A13' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-14": # templated "build-artifacts-chunk-14"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-14 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-14) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A14' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-15": # templated "build-artifacts-chunk-15"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-15 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-15) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A15' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-16": # templated "build-artifacts-chunk-16"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-16 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-16) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A16' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+  "build-artifacts-chunk-17": # templated "build-artifacts-chunk-17"
+    if: ${{ github.repository_owner == 'armbian' && needs.matrix_prep.outputs.artifacts-chunk-not-empty-17 == 'yes' }}  # <-- HERE: Chunk number.
+    needs: [ "matrix_prep" ]
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.artifacts-chunk-json-17) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty A17' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # Login to ghcr.io, for later uploading rootfs to ghcr.io
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: "${{ github.repository_owner }}" # GitHub username or org
+          password: ${{ secrets.GITHUB_TOKEN }}    # GitHub actions builtin token. repo has to have pkg access.
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+      
+      - name: Checkout build repo
+        uses: actions/checkout@v3 # We don't need to clone git, really. A wget would suffice for GH-hosted runners. But using clone is better for Igor-hosted runners.
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          fetch-depth: 1
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Build  ${{matrix.desc}}
+        id: build
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+
+# template file: 650.per-chunk-images_job.yaml
+
+  "build-images-chunk-1": # templated "build-images-chunk-1"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-1 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-1) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I1' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-2": # templated "build-images-chunk-2"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-2 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-2) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I2' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-3": # templated "build-images-chunk-3"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-3 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-3) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I3' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-4": # templated "build-images-chunk-4"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-4 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-4) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I4' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-5": # templated "build-images-chunk-5"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-5 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-5) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I5' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-6": # templated "build-images-chunk-6"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-6 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-6) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I6' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-7": # templated "build-images-chunk-7"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-7 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-7) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I7' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-8": # templated "build-images-chunk-8"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-8 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-8) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I8' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-9": # templated "build-images-chunk-9"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-9 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-9) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I9' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-10": # templated "build-images-chunk-10"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-10 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-10) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I10' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-11": # templated "build-images-chunk-11"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-11 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-11) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I11' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-12": # templated "build-images-chunk-12"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-12 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-12) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I12' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-13": # templated "build-images-chunk-13"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-13 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-13) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I13' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-14": # templated "build-images-chunk-14"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-14 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-14) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I14' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-15": # templated "build-images-chunk-15"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-15 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-15) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I15' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+  "build-images-chunk-16": # templated "build-images-chunk-16"
+    needs: [ "matrix_prep", "all-artifacts-ready" ]
+    timeout-minutes: 90
+    if: ${{ always() && ( github.repository_owner == 'armbian' ) && ( needs.matrix_prep.outputs.images-chunk-not-empty-16 == 'yes' ) }} # <-- HERE: Chunk number.
+    strategy:
+      fail-fast: false # let other jobs try to complete if one fails
+      matrix: ${{ fromJSON(needs.matrix_prep.outputs.images-chunk-json-16) }} # <-- HERE: Chunk number.
+    name: ${{ matrix.desc || 'Empty I16' }} # <-- HERE: Chunk number.
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+
+      # cleaning self hosted runners
+      - name: "Runner clean ${{ needs.matrix_prep.outputs.version }}"
+        uses: armbian/actions/runner-clean@main
+
+      # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
+      - name: Cleanup userpatches repo
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: rm -rf userpatches.repo
+
+      - name: Checkout build repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.BUILD_REPOSITORY }}
+          ref: ${{ needs.matrix_prep.outputs.build-sha1 }}
+          clean: false # true is default. it *will* delete the hosts /dev if mounted inside.
+
+      # clone the userpatches repo (`armbian/os`)
+      - name: "Checkout userpatches repo: ${{env.USERPATCHES_REPOSITORY}}#${{env.USERPATCHES_REF}}"
+        uses: actions/checkout@v3
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        with:
+          repository: ${{ env.USERPATCHES_REPOSITORY }}
+          ref: ${{ env.USERPATCHES_REF }}
+          fetch-depth: 1
+          clean: false # true is default.
+          path: userpatches.repo
+
+      - name: "Put userpatches in place, and remove userpatches repo"
+        if: ${{ ( env.USERPATCHES_REPOSITORY != '' ) && ( env.USERPATCHES_REF != '' ) }}
+        run: |
+          mkdir -pv userpatches
+          rsync -av userpatches.repo/${{env.USERPATCHES_DIR}}/. userpatches/
+          rm -rf userpatches.repo
+
+      - name: Cleanup leftover output
+        run: |
+          rm -rfv output/images userpatches/VERSION output/debs output/debs-beta
+
+      - name: ${{matrix.desc}}
+        id: build-one-image
+        run: |
+          bash ./compile.sh ${{ matrix.invocation }} SHARE_LOG=yes MAKE_FOLDERS="archive" IMAGE_VERSION=${{ needs.matrix_prep.outputs.version }} ${{env.EXTRA_PARAMS_IMAGE}} ${{env.EXTRA_PARAMS_ALL_BUILDS}}
+
+      - name: Install SSH key for storage
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+        if: env.KEY_ARMBIAN_UPLOAD != null
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS_ARMBIAN_UPLOAD }}
+          if_key_exists: replace
+
+      - name: Check API rate limits
+        run: |
+
+          # install dependencies
+          if ! command -v "gh" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install gh
+          fi
+
+          while true
+            do
+            API_CALLS_TOTAL=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.limit')
+            API_CALLS_LEFT=$(gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /rate_limit | jq -r '.rate.remaining')
+            PERCENT=$(( API_CALLS_LEFT * 100 / API_CALLS_TOTAL ))
+            if (( $PERCENT > 30 )); then
+                echo "API rate in good shape $PERCENT % free"
+                exit 0
+            fi
+            echo "API rate lower then 30%, sleping 10m"
+            sleep 10m
+          done
+
+          # show current api rate
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.ACCESS_TOKEN }}" https://api.github.com/rate_limit
+
+      - name: Import GPG key
+        env:
+          GPG_KEY1: ${{ secrets.GPG_KEY1 }}
+        if: env.GPG_KEY1 != null
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.GPG_KEY1 }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE1 }}
+
+      - name: Sign
+        env:
+          GPG_PASSPHRASE1: ${{ secrets.GPG_PASSPHRASE1 }}
+        if: env.GPG_PASSPHRASE1 != null
+        run: |
+
+          echo ${{ secrets.GPG_PASSPHRASE1 }} | gpg --passphrase-fd 0 --armor --detach-sign --pinentry-mode loopback --batch --yes output/images/*/archive/*.img.xz
+
+      - name: "Upload artefacts"
+        #if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.release != 'stable' }}
+        if: ${{ inputs.release != 'stable' }}
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "output/images/*/*/Armbian_*.*"
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          replacesArtifacts: true
+          omitName: true
+          makeLatest: false
+          omitPrereleaseDuringUpdate: true
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Deploy to server
+        timeout-minutes: 90
+        env:
+          KEY_ARMBIAN_UPLOAD: ${{ secrets.KEY_ARMBIAN_UPLOAD }}
+          ARMBIAN_HOST_UPLOAD: ${{ secrets.ARMBIAN_HOST_UPLOAD }}
+
+        if: env.KEY_ARMBIAN_UPLOAD != null && env.ARMBIAN_HOST_UPLOAD != null
+        run: |
+
+          # install dependencies
+          if ! command -v "lftp" > /dev/null 2>&1; then
+             sudo apt-get -y -qq install lftp
+          fi
+
+          # upload image
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --no-empty-dirs --parallel=8 --no-perms output/images/ nightly/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+          # upload artifacts
+          lftp -u upload, -e "set net:timeout 4;set net:max-retries 6;mirror -R --include-glob *.deb --no-empty-dirs --parallel=8 --no-perms output/debs/ debs/ ;bye" sftp://${{ env.ARMBIAN_HOST_UPLOAD }}
+
+      - name: "Cleanup output images"
+        if: always()
+        run: rm -rfv output/images userpatches/VERSION
+
+# template file: 950.single_footer.yaml
+
+  # ------ aggregate all artifact chunks into a single dependency -------
+
+  closing:
+    name: "Footer"
+    runs-on: ubuntu-latest
+#    if: ${{ always() }}
+    needs: [ "matrix_prep", "all-artifacts-ready", "all-images-ready" ]
+    steps:
+
+      # Cleaning releases
+      - name: "Keep only 7 releases"
+        uses: Vucko130/delete-older-releases@v0.2.2
+        with:
+          keep_latest: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Cleaning logs
+      - name: "Keep only 7 days of workflow logs"
+        uses: igorjs/gh-actions-clean-workflow@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          days_old: 7
+
+      # Switch pre-release to release
+      - uses: ncipollo/release-action@v1
+        if: ${{ github.repository_owner == 'Armbian' && needs.matrix_prep.outputs.version != '' }}
+        with:
+          tag: "${{ needs.matrix_prep.outputs.version }}"
+          omitBody: true
+          omitName: true
+          allowUpdates: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
