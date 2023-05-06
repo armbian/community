@@ -77,7 +77,6 @@ jobs:
     - name: "Update action script"
       run: |
 
-        cd ..
         cd community
         git config --local user.email "info@armbian.com"
         git config --local user.name "Armbianworker"
