@@ -26,42 +26,42 @@ jobs:
           clean: false
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbian-alpha"
           repository: "os"
           filename: "alpha"
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbian-beta"
           repository: "os"
           filename: "beta"
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbian-gama"
           repository: "os"
           filename: "gama"
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbian-delta"
           repository: "os"
           filename: "delta"
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbiankappa"
           repository: "os"
           filename: "kappa"
 
       - name: Get releases
-        uses: armbian/actions/make-json@dev
+        uses: armbian/actions/make-json@main
         with:
           owner: "armbianro"
           repository: "os"
