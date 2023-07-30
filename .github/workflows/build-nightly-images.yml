@@ -1,0 +1,171 @@
+name: Build Nightly Images (admin/old)
+on:
+  repository_dispatch:
+    types: ["Build Nightly Images"]
+  workflow_dispatch:
+
+jobs:
+
+  Prepare:
+
+    if: ${{ github.repository_owner == 'Armbian' }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: "Keep only 7 releases"
+        uses: Vucko130/delete-older-releases@v0.2.2
+        with:
+          keep_latest: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Keep only 7 days of workflow logs"
+        uses: igorjs/gh-actions-clean-workflow@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          days_old: 7
+
+  generaterelease:
+
+    needs: Prepare
+    name: "Generate release"
+    if: ${{ github.repository_owner == 'Armbian' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{steps.releases.outputs.version}}
+      build_config: ${{steps.switch.outputs.build_config}}
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3.5.2
+      with:
+        clean: false
+
+    - name: "Switch release configs"
+      id: switch
+      run: |
+
+        echo "pre_release=true" >> $GITHUB_ENV
+        echo "build_config=all.conf" >> $GITHUB_ENV
+        echo "build_config=all.conf" >> $GITHUB_OUTPUT
+        if [[ "${{ github.event.inputs.release }}" == "stable" ]]; then
+            echo "pre_release=false" >> $GITHUB_ENV
+            echo "build_config=default.conf" >> $GITHUB_ENV
+            echo "build_config=default.conf" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Generate changelog
+      if: ${{ github.event.inputs.version == '' }}
+      id: changelog
+      uses: TriPSs/conventional-changelog-action@v3.19.0
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        git-message: 'Bump release to {version}'
+        git-user-name: armbianworker
+        git-user-email: info@armbian.com
+        output-file: 'false'
+        skip-version-file: 'false'
+        skip-on-empty: 'false'
+        skip-commit: 'false'
+        skip-ci: 'false'
+        version-file: "${{ github.event.inputs.release || 'nightly' }}.json"
+        pre-release: "${{ env.pre_release }}"
+        git-branch: 'main'
+        tag-prefix: ''
+        pre-release-identifier: 'trunk'
+
+    - name: "Generate body file"
+      run: |
+          echo "
+            <p align='center'>
+            <a href='https://www.armbian.com'>
+            <img src='https://raw.githubusercontent.com/armbian/.github/master/profile/tux-two.png' width='400'></a></p>
+            <h1 align=center>Rolling releases</h1>
+            <p align=center>
+            <a href='https://www.armbian.com'><img alt='Armbian Linux stable' src='https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20current&query=CURRENT&color=f71000&cacheSeconds=600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json'></a>
+            <a href='https://www.armbian.com'><img alt='Armbian Linux rolling' src='https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20edge&query=EDGE&color=34be5b&cacheSeconds=600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json'></a>
+            </p>
+            <br>
+
+            - rolling releases are available at the bottom of <a href='https://www.armbian.com/download/' target=_blanks>official download pages</a>
+            - if you want to change automated builds variants, edit <a href='https://github.com/armbian/os/tree/main/targets'>build config files</a>
+            - for old builds with unknown support status check <a href='https://archive.armbian.com' target=_blank>archives</a>
+
+            <br>
+            &nbsp;
+            </p>" > body.html
+
+    - uses: ncipollo/release-action@v1
+      if: ${{ github.repository_owner == 'Armbian' && github.event.inputs.version == '' }}
+      with:
+        tag: ${{ steps.changelog.outputs.tag }}
+        name: "${{ steps.changelog.outputs.tag }}"
+        bodyFile: "body.html"
+        prerelease: "false"
+        allowUpdates: true
+        removeArtifacts: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Save
+      id: releases
+      run: |
+
+        echo "${{ steps.changelog.outputs.tag }}" > tag
+        echo "version=${{ steps.changelog.outputs.tag }}${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+
+    - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: assets-for-download
+        path: tag
+        retention-days: 5
+
+  dispatch_1:
+    name: "Dispatch 1"
+    if: ${{ github.repository_owner == 'Armbian' }}
+    outputs:
+      version: ${{steps.releases.outputs.version}}
+    needs: generaterelease
+    strategy:
+      matrix:
+        repo: ['armbian-alpha/os','armbian-beta/os','armbian-gama/os','armbian-delta/os']
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.DISPATCH }}
+          repository: ${{ matrix.repo }}
+          event-type: "Build"
+          client-payload: '{"release": "nightly","board": "${{ github.event.inputs.board }}","config": "${{ needs.generaterelease.outputs.build_config }}", "version": "${{ needs.generaterelease.outputs.version }}"}'
+
+      - name: Save
+        id: releases
+        run: |
+          echo "version=${{ needs.generaterelease.outputs.version }}" >> $GITHUB_OUTPUT
+
+  dispatch_2:
+    name: "Dispatch 2"
+    if: ${{ github.repository_owner == 'Armbian' }}
+    outputs:
+      version: ${{steps.releases.outputs.version}}
+    needs: generaterelease
+    strategy:
+      matrix:
+        repo: ['armbiankappa/os', 'armbianro/os']
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.DISPATCH_2 }}
+          repository: ${{ matrix.repo }}
+          event-type: "Build"
+          client-payload: '{"release": "nightly","board": "${{ github.event.inputs.board }}","config": "${{ needs.generaterelease.outputs.build_config }}", "version": "${{ needs.generaterelease.outputs.version }}"}'
+
+      - name: Save
+        id: releases
+        run: |
+          echo "version=${{ needs.generaterelease.outputs.version }}" >> $GITHUB_OUTPUT
