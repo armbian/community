@@ -6,6 +6,15 @@
 <br>
 <a href=https://github.com/armbian/community><img alt="Armbian Linux rolling" src="https://img.shields.io/badge/dynamic/json?label=Armbian%20Linux%20edge&query=EDGE&color=34be5b&cacheSeconds=600&style=for-the-badge&url=https%3A%2F%2Fgithub.com%2Farmbian%2Fscripts%2Freleases%2Fdownload%2Fstatus%2Frunners_capacity.json"></a>
 <br><br>
+<br><br>
+Build Clusters Health<br>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbian-alpha/os/build.yml?label=01&style=flat-square&branch=main"></a>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbian-beta/os/build.yml?label=02&style=flat-square&branch=main"></a>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbian-gama/os/build.yml?label=03&style=flat-square&branch=main"></a>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbian-delta/os/build.yml?label=04&style=flat-square&branch=main"></a>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbiankappa/os/build.yml?label=05&style=flat-square&branch=main"></a>
+<a href="#"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/armbianro/os/build.yml?label=06&style=flat-square&branch=main"></a>
+<p>
 <b>assembled once per day</b>
 <br><br><a href=https://www.armbian.com/><img src="https://img.shields.io/badge/interested%20in%20stable%20images%3F-red?style=for-the-badge"></a><br><br>
 <a href=https://fosstodon.org/@armbian><img alt="Mastodon Follow" src="https://img.shields.io/mastodon/follow/109365956768424870?domain=https%3A%2F%2Ffosstodon.org&logo=mastodon&style=flat-square"></a>
