@@ -37,6 +37,7 @@ lists:
     - { BOARD: nanopiair, BRANCH: current }
     - { BOARD: nanopik1plus, BRANCH: current }
     - { BOARD: nanopik2-s905, BRANCH: current }
+    - { BOARD: nanopi-r5s, BRANCH: edge }
     - { BOARD: nezha, BRANCH: current }
     - { BOARD: orangepi2, BRANCH: current }
     - { BOARD: orangepipc2, BRANCH: current }
