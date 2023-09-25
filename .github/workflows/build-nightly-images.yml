@@ -57,7 +57,7 @@ jobs:
     - name: Generate changelog
       if: ${{ github.event.inputs.version == '' }}
       id: changelog
-      uses: TriPSs/conventional-changelog-action@v3.19.0
+      uses: TriPSs/conventional-changelog-action@v4.1.0
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         git-message: 'Bump release to {version}'
