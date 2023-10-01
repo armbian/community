@@ -1,6 +1,6 @@
 {
   "name": "Armbian OS",
-  "version": "23.8.0-trunk.1",
+  "version": "23.8.0-trunk.2",
   "description": "Linux for ARM development boards",
   "keywords": [
     "ARM",
