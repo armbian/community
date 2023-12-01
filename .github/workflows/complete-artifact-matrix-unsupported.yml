@@ -347,7 +347,7 @@ env:
   BUILD_REF: "${{ inputs.ref || inputs.branch || 'main' }}" # branch or tag or sha1
 
   # For easier reuse across the multiple chunks ('armbian/os' repo)
-  USERPATCHES_REPOSITORY: "armbian/os"
+  USERPATCHES_REPOSITORY: "${{ github.repository }}"
   USERPATCHES_REF: "main" # branch or tag or sha1
   USERPATCHES_DIR: "userpatches" # folder inside USERPATCHES_REPOSITORY
 
