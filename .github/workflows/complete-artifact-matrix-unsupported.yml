@@ -431,7 +431,7 @@ jobs:
         id: changelog
         uses: TriPSs/conventional-changelog-action@v4.1.1
         with:
-          github-token: ${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}
+          github-token: ${{ env.GH_TOKEN }}
           git-message: 'Bump release to {version}'
           git-user-name: armbianworker
           git-user-email: info@armbian.com
@@ -492,7 +492,7 @@ jobs:
           prerelease: "true"
           allowUpdates: true
           removeArtifacts: true
-          token: ${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Save
         id: releases
@@ -568,7 +568,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: ${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}  # GitHub actions builtin token. repo has to have pkg access.
+          password: ${{ env.GH_TOKEN }}  # GitHub actions builtin token. repo has to have pkg access.
 
       - name: Prepare Info JSON and Matrices
         id: prepare-matrix
@@ -810,7 +810,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -872,7 +872,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -934,7 +934,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -996,7 +996,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1058,7 +1058,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1120,7 +1120,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1182,7 +1182,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1244,7 +1244,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1306,7 +1306,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1368,7 +1368,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1430,7 +1430,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1492,7 +1492,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1554,7 +1554,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1616,7 +1616,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1678,7 +1678,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1740,7 +1740,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -1802,7 +1802,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
@@ -2010,7 +2010,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -2211,7 +2211,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -2412,7 +2412,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -2613,7 +2613,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -2814,7 +2814,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -3015,7 +3015,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -3216,7 +3216,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -3417,7 +3417,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -3618,7 +3618,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -3819,7 +3819,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -4020,7 +4020,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -4221,7 +4221,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -4422,7 +4422,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -4623,7 +4623,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -4824,7 +4824,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -5025,7 +5025,7 @@ jobs:
         run: |
 
           arr[0]="${{ secrets.ACCESS_TOKEN }}"
-          arr[1]="${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"
+          arr[1]="${{ env.GH_TOKEN }}"
           rand=$[ $RANDOM % 2 ]
           echo "upload_user=${arr[$rand]}" >> $GITHUB_ENV
 
@@ -5105,7 +5105,7 @@ jobs:
         with:
           registry: ghcr.io
           username: "${{ github.repository_owner }}" # GitHub username or org
-          password: "${{ secrets.ACCESS_TOKEN_ARMBIANWORKER }}"    # GitHub actions builtin token. repo has to have pkg access.
+          password: "${{ env.GH_TOKEN }}"    # GitHub actions builtin token. repo has to have pkg access.
 
       # cleanup the place where we will clone the userpatches repo, to avoid git going insane and cleaning everything later
       - name: Cleanup userpatches repo
