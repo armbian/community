@@ -1,0 +1,273 @@
+#
+# Armbian release template for automated generation. DO NOT EDIT .yaml files. Edit .template
+#
+
+common-gha-configs:
+  armbian-gha: &armbian-gha
+    runners:
+      default: "ubuntu-latest" # or a ["tag", "list"]
+      by-name:
+        kernel: [ "self-hosted", "Linux", "alfa" ]
+        uboot: [ "self-hosted", "Linux", "fast", "X64" ]
+        armbian-bsp-cli: [ "fast" ]
+      by-name-and-arch:
+        rootfs-armhf: [ "self-hosted", "Linux", "ARM64" ]
+        rootfs-arm64: [ "self-hosted", "Linux", "ARM64" ]
+        rootfs-amd64: [ "self-hosted", "Linux", "X64" ]
+        rootfs-riscv64: [ "self-hosted", "Linux", "X64" ]
+        image-armhf: [ "self-hosted", "Linux", 'fast' ]
+        image-arm64: [ "self-hosted", "Linux", 'fast' ]
+        image-amd64: [ "self-hosted", "Linux", 'fast', "X64" ]
+        image-riscv64: [ "self-hosted", "Linux", 'fast', "X64" ]
+
+lists:
+
+  # automated lists start
+  community-maintained-riscv64: &community-maintained-riscv64
+    # auto generated section
+    - { BOARD: beaglev, BRANCH: edge }
+    - { BOARD: star64, BRANCH: edge }
+    - { BOARD: uefi-riscv64, BRANCH: current }
+    - { BOARD: unleashed, BRANCH: edge }
+    - { BOARD: unmatched, BRANCH: edge }
+    - { BOARD: visionfive2, BRANCH: edge }
+    - { BOARD: visionfive, BRANCH: edge }
+    # end of auto generated section
+
+  community-maintained-headless: &community-maintained-headless
+    # auto generated section
+    - { BOARD: bananapir2, BRANCH: legacy}
+    - { BOARD: clearfogbase, BRANCH: current }
+    - { BOARD: clearfogpro, BRANCH: current }
+    - { BOARD: cubieboard, BRANCH: current }
+    - { BOARD: espressobin, BRANCH: current }
+    - { BOARD: helios4, BRANCH: current }
+    - { BOARD: lime-a33, BRANCH: current }
+    - { BOARD: macchiatobin-doubleshot, BRANCH: current }
+    - { BOARD: melea1000, BRANCH: current }
+    - { BOARD: mk808c, BRANCH: current }
+    - { BOARD: nanopiair, BRANCH: current }
+    - { BOARD: nanopineo2black, BRANCH: current }
+    - { BOARD: nanopineo2, BRANCH: current }
+    - { BOARD: nanopineo3, BRANCH: current }
+    - { BOARD: nanopineocore2, BRANCH: current }
+    - { BOARD: nanopineo, BRANCH: current }
+    - { BOARD: nanopineoplus2, BRANCH: current }
+    - { BOARD: nanopi-r1, BRANCH: current }
+    - { BOARD: nanopi-r1s-h5, BRANCH: current }
+    - { BOARD: nanopi-r2c, BRANCH: current }
+    - { BOARD: nanopi-r2s, BRANCH: current }
+    - { BOARD: nanopi-r4se, BRANCH: current }
+    - { BOARD: olinux-som-a13, BRANCH: current }
+    - { BOARD: orangepi-r1plus, BRANCH: current }
+    - { BOARD: orangepizeroplus2-h5, BRANCH: current }
+    - { BOARD: pinecube, BRANCH: current }
+    - { BOARD: rockpi-s, BRANCH: current }
+    - { BOARD: zeropi, BRANCH: current }
+    # end of auto generated section
+
+  community-maintained-fast-hdmi: &community-maintained-fast-hdmi
+    # auto generated section
+    - { BOARD: aml-s9xx-box, BRANCH: current }
+    - { BOARD: armsom-w3, BRANCH: legacy}
+    - { BOARD: bananapim64, BRANCH: current }
+    - { BOARD: bananapir2pro, BRANCH: current }
+    - { BOARD: clockworkpi-a06, BRANCH: current }
+    - { BOARD: firefly-rk3399, BRANCH: current }
+    - { BOARD: helios64, BRANCH: current }
+    - { BOARD: hikey960, BRANCH: current }
+    - { BOARD: hinlink-h28k, BRANCH: legacy}
+    - { BOARD: hinlink-h88k, BRANCH: legacy}
+    - { BOARD: indiedroid-nova, BRANCH: edge }
+    - { BOARD: inovato-quadra, BRANCH: current }
+    - { BOARD: jetson-nano, BRANCH: current }
+    - { BOARD: jp-tvbox-3566, BRANCH: current }
+    - { BOARD: khadas-edge, BRANCH: current }
+    - { BOARD: lime-a64, BRANCH: current }
+    - { BOARD: mekotronics-r58x-pro, BRANCH: legacy}
+    - { BOARD: nanopct4, BRANCH: current }
+    - { BOARD: nanopia64, BRANCH: current }
+    - { BOARD: nanopik1plus, BRANCH: current }
+    - { BOARD: nanopik2-s905, BRANCH: current }
+    - { BOARD: nanopim4, BRANCH: current }
+    - { BOARD: nanopim4v2, BRANCH: current }
+    - { BOARD: nanopineo4, BRANCH: current }
+    - { BOARD: odroidc4, BRANCH: current }
+    - { BOARD: odroidhc4, BRANCH: current }
+    - { BOARD: odroidn2, BRANCH: current }
+    - { BOARD: odroidn2l, BRANCH: edge }
+    - { BOARD: orangepi3b, BRANCH: edge }
+    - { BOARD: orangepi3, BRANCH: current }
+    - { BOARD: orangepi3-lts, BRANCH: current }
+    - { BOARD: orangepi4, BRANCH: current }
+    - { BOARD: orangepilite2, BRANCH: current }
+    - { BOARD: orangepioneplus, BRANCH: current }
+    - { BOARD: orangepipc2, BRANCH: current }
+    - { BOARD: orangepi-rk3399, BRANCH: current }
+    - { BOARD: orangepiwin, BRANCH: current }
+    - { BOARD: panther-x2, BRANCH: current }
+    - { BOARD: pine64so, BRANCH: current }
+    - { BOARD: pinebook-a64, BRANCH: current }
+    - { BOARD: pineh64-b, BRANCH: current }
+    - { BOARD: pineh64, BRANCH: current }
+    - { BOARD: quartz64a, BRANCH: current }
+    - { BOARD: quartz64b, BRANCH: current }
+    - { BOARD: recore, BRANCH: current }
+    - { BOARD: rk3318-box, BRANCH: current }
+    - { BOARD: rock-4se, BRANCH: current }
+    - { BOARD: rock-5-cmio, BRANCH: legacy}
+    - { BOARD: rock64, BRANCH: current }
+    - { BOARD: rockpi-4b, BRANCH: current }
+    - { BOARD: rockpi-4bplus, BRANCH: edge }
+    - { BOARD: rockpi-4c, BRANCH: current }
+    - { BOARD: rockpi-4cplus, BRANCH: current }
+    - { BOARD: rockpi-n10, BRANCH: current }
+    - { BOARD: roc-rk3399-pc, BRANCH: current }
+    - { BOARD: station-m1, BRANCH: current }
+    - { BOARD: station-m2, BRANCH: current }
+    - { BOARD: station-m3, BRANCH: legacy}
+    - { BOARD: station-p1, BRANCH: current }
+    - { BOARD: station-p2, BRANCH: current }
+    - { BOARD: tanix-tx6, BRANCH: current }
+    - { BOARD: tinkerboard-2, BRANCH: current }
+    - { BOARD: z28pro, BRANCH: current }
+    # end of auto generated section
+
+  community-maintained-slow-hdmi: &community-maintained-slow-hdmi
+    # auto generated section
+    - { BOARD: bananapi, BRANCH: current }
+    - { BOARD: bananapim1plus, BRANCH: current }
+    - { BOARD: bananapim2plus, BRANCH: current }
+    - { BOARD: bananapim2ultra, BRANCH: current }
+    - { BOARD: bananapim2zero, BRANCH: current }
+    - { BOARD: bananapim3, BRANCH: current }
+    - { BOARD: bananapipro, BRANCH: current }
+    - { BOARD: beelinkx2, BRANCH: current }
+    - { BOARD: cubieboard2, BRANCH: current }
+    - { BOARD: cubieboard4, BRANCH: current }
+    - { BOARD: cubietruck, BRANCH: current }
+    - { BOARD: cubietruckplus, BRANCH: current }
+    - { BOARD: cubox-i, BRANCH: current }
+    - { BOARD: lime2, BRANCH: current }
+    - { BOARD: lime, BRANCH: current }
+    - { BOARD: micro, BRANCH: current }
+    - { BOARD: orangepi2, BRANCH: current }
+    - { BOARD: orangepilite, BRANCH: current }
+    - { BOARD: orangepipc, BRANCH: current }
+    - { BOARD: orangepipcplus, BRANCH: current }
+    - { BOARD: orangepiplus2e, BRANCH: current }
+    - { BOARD: orangepiplus, BRANCH: current }
+    - { BOARD: orangepizeroplus2-h3, BRANCH: current }
+    - { BOARD: pcduino3, BRANCH: current }
+    - { BOARD: rk322x-box, BRANCH: current }
+    - { BOARD: sunvell-r69, BRANCH: current }
+    - { BOARD: udoo, BRANCH: current }
+    - { BOARD: xt-q8l-v10, BRANCH: current }
+    # end of auto generated section
+
+  # automated lists stop
+
+targets:
+
+  # debian cli
+
+  full-cli-stable-debian:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: bookworm
+      BUILD_MINIMAL: "no"
+      BUILD_DESKTOP: "no"
+    items:
+      - *community-maintained-headless
+      - *community-maintained-fast-hdmi
+      - *community-maintained-slow-hdmi
+
+  # ubuntu cli
+
+  full-cli-stable-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: jammy
+      BUILD_MINIMAL: "no"
+      BUILD_DESKTOP: "no"
+    items:
+      - *community-maintained-headless
+      - *community-maintained-fast-hdmi
+      - *community-maintained-slow-hdmi
+
+  # ubuntu testing cli minimal
+
+  minimal-cli-unstable-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: mantic
+      BUILD_MINIMAL: "yes"
+      BUILD_DESKTOP: "no"
+    items:
+      - *community-maintained-riscv64
+
+  # ubuntu xfce
+
+  xfce-desktop-stable-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: jammy
+      BUILD_MINIMAL: "no"
+      DESKTOP_ENVIRONMENT: "xfce"
+      BUILD_DESKTOP: "yes"
+      DESKTOP_ENVIRONMENT_CONFIG_NAME: "config_base"
+      DESKTOP_APPGROUPS_SELECTED: "desktop_tools,internet,languages,multimedia,remote_desktop"
+    items:
+      - *community-maintained-riscv64
+      - *community-maintained-slow-hdmi
+
+  # ubuntu gnome
+  gnome-desktop-stable-ubuntu:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "yes"
+    vars:
+      RELEASE: jammy
+      BUILD_MINIMAL: "no"
+      DESKTOP_ENVIRONMENT: "gnome"
+      BUILD_DESKTOP: "yes"
+      DESKTOP_ENVIRONMENT_CONFIG_NAME: "config_base"
+      DESKTOP_APPGROUPS_SELECTED: "browsers,chat,desktop_tools,editors,email,internet,languages,multimedia,office,programming,remote_desktop"
+    items:
+      - *community-maintained-fast-hdmi
+
+  # automated section
+  automated-section:
+    enabled: yes
+    configs: [ armbian-images ]
+    pipeline:
+      gha: *armbian-gha
+      build-image: "no"
+    vars:
+      RELEASE: jammy
+      BUILD_MINIMAL: "yes"
+      BUILD_DESKTOP: "no"
+    items:
+      - *community-maintained-riscv64
+      - *community-maintained-headless
+      - *community-maintained-fast-hdmi
+      - *community-maintained-slow-hdmi
+  # end of automated-section:
