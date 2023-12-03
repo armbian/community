@@ -19,6 +19,7 @@
   F.A.Q.
 <ul>
   <li>How to start? <a href=https://docs.armbian.com/User-Guide_Getting-Started/>Use official Armbian guide</a></li>
+  <li><a href=https://docs.armbian.com/User-Guide_Board-Support-Rules/>How "Community maintained" can be upgraded to standard support?</a></li>
   <li>What Lunar or Mantic stands for? They are assembled from Ubuntu packages.</li>
   <li>What Trixie or Sid stands for? They are assembled from Debian packages.</li>
   <li>Which variant should I pick? Minimal is command line, CLI is server and desktop is usually XFCE.</li>
