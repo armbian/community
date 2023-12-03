@@ -13,14 +13,14 @@
   <br>
 
 
--  assembled in automated and untested manner, 
--  compiled using official Armbian build framework and digitally signed,
+-  assembled in automated and untested manner
+-  compiled using official Armbian build framework and digitally signed
 -  build targets are generated automatically <a href=https://github.com/armbian/build/tree/main/config/boards>from (.csc and .tvb)</a> build configs
--  getting updates from official armbian servers,
--  assembled from unstable Debian and Ubuntu packages,
--  If you don't find image you are looking for, check <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build from sources</a>,
+-  getting updates from official armbian servers
+-  assembled from unstable Debian and Ubuntu packages
+-  If you don't find image you are looking for, check <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build from sources</a>
 -  Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
--  Support? <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> Community forums</a>.
+-  Support? <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> Community forums</a>
   <br>
 &nbsp;
 <p>
