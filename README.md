@@ -2,7 +2,7 @@
   <a href="#">
   <img src="https://raw.githubusercontent.com/armbian/build/master/.github/armbian-logo.png" alt="Armbian logo" width="144">
   </a><br>
-  <strong>Armbian Linux Community</strong><br>rolling release<br>
+  <strong>Armbian Linux Community Maintained</strong><br>rolling release<br>
 <h2 align=center><a href=https://github.com/armbian/community/releases/latest><img src="https://img.shields.io/badge/Download%20latest%20images%3F-white?style=for-the-badge&color=green"></a>  </h2>
 </p>
   
