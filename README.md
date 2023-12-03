@@ -21,10 +21,11 @@
 -  If you don't find image you are looking for, check <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build from sources</a>
 -  Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
 -  Support? <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> Community forums</a>
-  <br>
-&nbsp;
+  
+<a href=#><img src="https://github.com/armbian/community/blob/main/.github/rolling-armbian-banner.png" width=815></a>
 <p>
-F.A.Q.
+&nbsp;
+  F.A.Q.
 <ul>
   <li>What Lunar or Mantic stands for? They are assembled from Ubuntu packages.</li>
   <li>What Trixie or Sid stands for? They are assembled from Debian packages.</li>
@@ -33,6 +34,5 @@ F.A.Q.
 </p>
 &nbsp;
 
-<a href=#><img src="https://github.com/armbian/community/blob/main/.github/rolling-armbian-banner.png" width=815></a>
-&nbsp;
+
 &nbsp;
