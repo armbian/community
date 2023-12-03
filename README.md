@@ -3,12 +3,7 @@
   <img src="https://raw.githubusercontent.com/armbian/build/master/.github/armbian-logo.png" alt="Armbian logo" width="144">
   </a><br>
   <strong>Armbian Linux Community</strong><br>rolling release<br>
-<h2 align=center> Download  </h2>
-</p>
-<p align="center">
-  <a href=https://github.com/armbian/community/releases/latest>
-<img src="https://img.shields.io/badge/Community%20maintained%3F-white?style=for-the-badge&color=blue"></a>
-<a href="https://www.armbian.com/download/?device_support=Standard%20support"/><img alt="Armbian Standard Supported builds" src="https://img.shields.io/badge/Standard%20support%3F-white?style=for-the-badge&color=green"></a>
+<h2 align=center><a href=https://github.com/armbian/community/releases/latest><img src="https://img.shields.io/badge/Download%20latest%20images%3F-white?style=for-the-badge&color=blue"></a>  </h2>
 </p>
   
 -  compiled using official Armbian build framework and digitally signed
