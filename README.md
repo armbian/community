@@ -6,14 +6,12 @@
 <h2 align=center><a href=https://github.com/armbian/community/releases/latest><img src="https://img.shields.io/badge/Download%20latest%20images%3F-white?style=for-the-badge&color=green"></a>  </h2>
 </p>
   
--  compiled using official Armbian build framework and digitally signed
--  build targets are generated automatically <a href=https://github.com/armbian/build/tree/main/config/boards>from (.csc and .tvb)</a> build configs
--  assembled in automated and untested manner
--  getting updates from official armbian servers
--  assembled from unstable Debian and Ubuntu packages
+-  compiled using official Armbian build framework
+-  generated automatically <a href=https://github.com/armbian/build/tree/main/config/boards>from (.csc and .tvb)</a> build configs
+-  assembled from unstable Debian and Ubuntu packages and <b>not tested</b>!
 -  If you don't find image you are looking for, check <a href=https://www.armbian.com/download/ target=_blanks>supported builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a> or <a href=https://github.com/armbian/build>build from sources</a>
 -  Armbian project maintainers <b>does not answer</b> any <b>support questions</b> regarding those builds!
--  Support? <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> Community forums</a>
+-  Support? <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> Armbian community forums</a>, <a href=https://bugzilla.kernel.org/>Linux kernel bugzilla</a>
   
 <a href=#><img src="https://github.com/armbian/community/blob/main/.github/rolling-armbian-banner.png" width=815></a>
 <p>
