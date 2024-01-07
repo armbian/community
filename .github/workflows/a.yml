@@ -1,0 +1,17 @@
+name: "Clean"
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: Recreate action
+    runs-on: ubuntu-latest
+    steps:
+    - uses: dev-drprasad/delete-older-releases@v0.3.2
+      with:
+        repo: armbian/os
+        delete_prerelease_only: true
+        keep_latest: 3
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
