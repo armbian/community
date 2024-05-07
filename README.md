@@ -6,7 +6,7 @@
 <h2 align=center><a href=https://github.com/armbian/community/releases/latest><img src="https://img.shields.io/badge/Download%20latest%20images%3F-white?style=for-the-badge&color=green"></a>  </h2>
 </p>
  
--  generated automatically using <b>official</b> Armbian <b>build framework</b> <a href=https://github.com/armbian/build/tree/main/config/boards>from (.csc and .tvb)</a> build configs
+-  generated once per week by using <b>official</b> Armbian <b>build framework</b> <a href=https://github.com/armbian/build/tree/main/config/boards>from (.csc and .tvb)</a> build configs
 -  images are <b>not tested</b> by Armbian team. Seek for support in <a href=https://forum.armbian.com/forum/97-unmaintained-csceoltvb-other> community forums sections</a>, <a href=https://bugzilla.kernel.org/>Linux kernel bugzilla</a>
 -  upgrade from <a href=https://docs.armbian.com/User-Guide_Board-Support-Rules/>"Community maintained" to standard support</a> is possible with your help. <a href=https://forum.armbian.com/staffapplications/application/8-single-board-computer-maintainer/>Start maintaining</a>!</li>
   
