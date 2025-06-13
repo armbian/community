@@ -1,0 +1,33 @@
+name: Delete Old Releases
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 03:00 UTC
+  workflow_dispatch:      # Manual trigger
+
+jobs:
+  clean_releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get all releases (handle pagination)
+          releases=$(gh api --paginate repos/${{ github.repository }}/releases)
+
+          # Process full releases
+          full_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == false)] | sort_by(.created_at) | reverse')
+          full_to_delete=$(echo "$full_releases" | jq '.[3:] | .[].id')
+          for id in $full_to_delete; do
+            echo "Deleting old full release ID: $id"
+            gh api --method DELETE repos/${{ github.repository }}/releases/$id
+          done
+
+          # Process pre-releases
+          pre_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == true)] | sort_by(.created_at) | reverse')
+          pre_to_delete=$(echo "$pre_releases" | jq '.[3:] | .[].id')
+          for id in $pre_to_delete; do
+            echo "Deleting old pre-release ID: $id"
+            gh api --method DELETE repos/${{ github.repository }}/releases/$id
+          done
