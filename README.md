@@ -19,8 +19,8 @@
   <li>My hardware is not listed! Check <a href="https://www.armbian.com/download/?device_support=Standard%20support" target=_blanks>Standard support builds</a>, <a href=https://archive.armbian.com target=_blank>archives</a>, <a href=https://forum.armbian.com/forum/97-community-maintained-staging/>community creations</a>.</li>
   <li>How to start? <a href=https://docs.armbian.com/User-Guide_Getting-Started/>Use official Armbian guide</a></li>
   <li>Where to find different combination of packages & desktop? <a href=https://github.com/armbian/build>Build from sources</a>!</li>
-  <li>What Lunar or Mantic stands for? They are assembled from Ubuntu packages.</li>
-  <li>What Trixie or Sid stands for? They are assembled from Debian packages.</li>
+  <li>What does Noble and Plucky stand for? They are our releases based on Ubuntu.</li>
+  <li>What does Trixie and Sid stand for? They are our releases based on Debian.</li>
   <li>Which variant should I pick? Minimal is command line, CLI is server and desktop is usually XFCE.</li>
 </ul>
 </p>
