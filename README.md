@@ -5,7 +5,7 @@
 
 ### Purpose of This Repository
 
-- This repository automation builds and releases images weekly for unofficial, community-supported configurations using the [official Armbian build framework](https://github.com/armbian/build).  
+- This repository automation builds and [releases images](https://github.com/armbian/community/releases) weekly for unofficial, community-supported configurations using the [official Armbian build framework](https://github.com/armbian/build).  
 - These images are **not tested** by the Armbian team! For assistance, please use the [community support forum](https://community.armbian.com) or report upstream issues via the [Linux kernel bug tracker](https://bugzilla.kernel.org/).  
 - You can help **promote "Community Maintained" boards to Standard Support** — [learn how to become a board maintainer](https://forum.armbian.com/staffapplications/application/8-single-board-computer-maintainer/).  
 - **Faster downloads are available via torrent mirrors** — we encourage you to give them a try!
