@@ -1,33 +1,129 @@
-name: Delete Old Releases
+name: Delete old releases
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Daily at 03:00 UTC
-  workflow_dispatch:      # Manual trigger
+    - cron: "0 3 * * *"   # daily 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep_full:
+        description: "How many full (non-prerelease) releases to keep"
+        required: false
+        default: "3"
+      keep_pre:
+        description: "How many prereleases to keep"
+        required: false
+        default: "3"
+      delete_tags:
+        description: "Also delete the git tag for deleted releases"
+        type: boolean
+        required: false
+        default: true
+      dry_run:
+        description: "Do not delete anything; just print what would happen"
+        type: boolean
+        required: false
+        default: false
+      protect_tag_regex:
+        description: "Regex of tag names that must never be deleted (empty = none)"
+        required: false
+        default: "^$"
 
 jobs:
   clean_releases:
+    name: "Clean releases"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to delete releases (and tags if enabled)
+
     steps:
-      - name: Delete old releases
+      - name: Delete old releases (and optionally tags)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          KEEP_FULL: ${{ inputs.keep_full || '3' }}
+          KEEP_PRE:  ${{ inputs.keep_pre  || '3' }}
+          DELETE_TAGS: ${{ inputs.delete_tags || 'true' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          PROTECT_TAG_REGEX: ${{ inputs.protect_tag_regex || '^$' }}
+        shell: bash
         run: |
-          # Get all releases (handle pagination)
-          releases=$(gh api --paginate repos/${{ github.repository }}/releases)
+          set -euo pipefail
 
-          # Process full releases
-          full_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == false)] | sort_by(.created_at) | reverse')
-          full_to_delete=$(echo "$full_releases" | jq '.[3:] | .[].id')
-          for id in $full_to_delete; do
-            echo "Deleting old full release ID: $id"
-            gh api --method DELETE repos/${{ github.repository }}/releases/$id
-          done
+          echo "Repo: $REPO"
+          echo "Keep full releases: $KEEP_FULL"
+          echo "Keep prereleases:  $KEEP_PRE"
+          echo "Delete tags:       $DELETE_TAGS"
+          echo "Dry-run:           $DRY_RUN"
+          echo "Protect regex:     $PROTECT_TAG_REGEX"
+          echo
 
-          # Process pre-releases
-          pre_releases=$(echo "$releases" | jq -c '[.[] | select(.prerelease == true)] | sort_by(.created_at) | reverse')
-          pre_to_delete=$(echo "$pre_releases" | jq '.[3:] | .[].id')
-          for id in $pre_to_delete; do
-            echo "Deleting old pre-release ID: $id"
-            gh api --method DELETE repos/${{ github.repository }}/releases/$id
-          done
+          # Fetch all releases (paginated)
+          releases_json="$(gh api --paginate "repos/$REPO/releases")"
+
+          delete_release_and_tag() {
+            local rid="$1"
+            local tag="$2"
+            local name="$3"
+            local kind="$4"
+
+            # Protect tag patterns if requested
+            if [[ -n "${PROTECT_TAG_REGEX}" ]] && [[ "$tag" =~ ${PROTECT_TAG_REGEX} ]]; then
+              echo "SKIP (protected tag) [$kind] $name  tag=$tag  id=$rid"
+              return 0
+            fi
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "DRY-RUN delete [$kind] $name  tag=$tag  id=$rid"
+              return 0
+            fi
+
+            echo "Deleting release [$kind] $name  tag=$tag  id=$rid"
+            gh api --method DELETE "repos/$REPO/releases/$rid"
+
+            if [[ "$DELETE_TAGS" == "true" && -n "$tag" ]]; then
+              # Delete the git ref for the tag. If the tag ref doesn't exist, don't fail the job.
+              echo "Deleting tag ref: refs/tags/$tag"
+              gh api --method DELETE "repos/$REPO/git/refs/tags/$tag" || echo "Tag ref not found (already deleted?): $tag"
+            fi
+          }
+
+          # Helper to select, sort newest-first, and delete beyond keep count
+          process_group() {
+            local jq_filter="$1"
+            local keep="$2"
+            local kind="$3"
+
+            # Build array of candidates sorted newest first by created_at
+            # Keep fields we need (id, tag_name, name)
+            candidates="$(echo "$releases_json" | jq -c "$jq_filter
+              | sort_by(.created_at) | reverse
+              | map({id, tag_name, name})")"
+
+            total="$(echo "$candidates" | jq 'length')"
+            echo "Found $total $kind releases"
+
+            # Nothing to delete?
+            if (( total <= keep )); then
+              echo "Nothing to delete for $kind (keep=$keep)"
+              echo
+              return 0
+            fi
+
+            # Select items beyond keep
+            echo "$candidates" | jq -c ".[${keep}:][]" | while read -r item; do
+              rid="$(echo "$item" | jq -r '.id')"
+              tag="$(echo "$item" | jq -r '.tag_name // ""')"
+              name="$(echo "$item" | jq -r '.name // .tag_name // "(no name)"')"
+              delete_release_and_tag "$rid" "$tag" "$name" "$kind"
+            done
+
+            echo
+          }
+
+          # Full releases
+          process_group '[.[] | select(.prerelease == false)]' "$KEEP_FULL" "full"
+
+          # Pre-releases
+          process_group '[.[] | select(.prerelease == true)]' "$KEEP_PRE" "pre"
+
+          echo "Done."
