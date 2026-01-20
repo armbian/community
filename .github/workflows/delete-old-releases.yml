@@ -31,7 +31,7 @@ on:
 jobs:
   clean_releases:
     name: "Clean releases"
-    runs-on: ubuntu-latest
+    runs-on: Linux
     permissions:
       contents: write   # required to delete releases (and tags if enabled)
 
@@ -93,10 +93,10 @@ jobs:
             local keep="$2"
             local kind="$3"
 
-            # Build array of candidates sorted newest first by created_at
+            # Build array of candidates sorted newest first by published_at
             # Keep fields we need (id, tag_name, name)
             candidates="$(echo "$releases_json" | jq -c "$jq_filter
-              | sort_by(.created_at) | reverse
+              | sort_by(.published_at) | reverse
               | map({id, tag_name, name})")"
 
             total="$(echo "$candidates" | jq 'length')"
